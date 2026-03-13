@@ -1,6 +1,7 @@
 import { useState, memo } from "react";
 import type { Primitives, PrimGroup, DragHandlers, ShadowToken } from "./types";
 import { getPrimOptions, resolveColor } from "./generators";
+import { normalizeHex } from "./defaults";
 
 export function AddRowBtn({ onClick, label, disabled }: { onClick: () => void; label: string; disabled?: boolean }) {
   return <button onClick={disabled ? undefined : onClick} disabled={disabled} className="add-row-btn">{label}</button>;
@@ -65,8 +66,9 @@ export const DraggableRow = memo(function DraggableRow({ id, dragHandlers, child
 
 export function InlineLabel({ value, onCommit, prefix="", style={} }: { value: string; onCommit: (v: string) => void; prefix?: string; style?: React.CSSProperties }) {
   const [editing, setEditing] = useState(false), [val, setVal] = useState(value);
-  if (editing) return <input autoFocus value={val} onChange={e=>setVal(e.target.value)} onBlur={()=>setEditing(false)} onKeyDown={e=>{if(e.key==="Enter"){onCommit(val);setEditing(false);}if(e.key==="Escape")setEditing(false);}} className="inline-label-input" style={style} />;
-  return <span onClick={() => { setVal(value); setEditing(true); }} title="Click to rename" className="inline-label" style={style}>{prefix}{value}</span>;
+  const commit = () => { const t = val.trim(); if (t && t !== value) onCommit(t); setEditing(false); };
+  if (editing) return <input autoFocus value={val} onChange={e=>setVal(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter")commit();if(e.key==="Escape")setEditing(false);}} className="inline-label-input" style={style} />;
+  return <span onDoubleClick={() => { setVal(value); setEditing(true); }} title="Double-click to rename" className="inline-label" style={style}>{prefix}{value}</span>;
 }
 
 export const PrimSelector = memo(function PrimSelector({ value, primitives, primGroups, onChange, mode }: { value: string; primitives: Primitives; primGroups: PrimGroup[]; onChange: (v: string) => void; mode: string }) {
@@ -82,7 +84,7 @@ export const PrimSelector = memo(function PrimSelector({ value, primitives, prim
       <select value={isCustom?"custom":value} onChange={e=>{const v=e.target.value;if(v==="custom"){onChange(resolved);}else{onChange(v);}}} className="prim-selector__select">
         <optgroup label={"-- "+mode+" mode --"}>{opts.map(o=><option key={o.ref} value={o.ref} style={{background:"var(--bg-input)"}}>{o.label}</option>)}</optgroup>
       </select>
-      {isCustom && <div className="prim-selector__custom"><input type="color" value={resolved} onChange={e=>onChange(e.target.value)} className="prim-selector__picker" /><input value={value} onChange={e=>onChange(e.target.value)} placeholder="#000000 or rgba(...)" className="prim-selector__hex" /></div>}
+      {isCustom && <div className="prim-selector__custom"><input type="color" value={resolved} onChange={e=>onChange(e.target.value)} className="prim-selector__picker" /><input value={value} onChange={e=>onChange(e.target.value)} onBlur={e=>{const n=normalizeHex(e.target.value);if(n!==value)onChange(n);}} placeholder="#000000 or rgba(...)" className="prim-selector__hex" /></div>}
     </div>
   );
 });

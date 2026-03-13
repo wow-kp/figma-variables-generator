@@ -161,6 +161,18 @@ export function loadSaved() {
 
 // ── Validation helpers ──────────────────────────────────────────────────────
 
+/** Auto-format a hex color: expand shorthand (fff -> #ffffff), add # if missing */
+export function normalizeHex(raw: string): string {
+  const s = raw.trim();
+  if (!s || s.startsWith("rgb") || s.startsWith("hsl") || s.startsWith("{")) return s;
+  const bare = s.startsWith("#") ? s.slice(1) : s;
+  if (/^[0-9a-fA-F]{3}$/.test(bare)) return "#" + bare[0]+bare[0]+bare[1]+bare[1]+bare[2]+bare[2];
+  if (/^[0-9a-fA-F]{4}$/.test(bare)) return "#" + bare[0]+bare[0]+bare[1]+bare[1]+bare[2]+bare[2]+bare[3]+bare[3];
+  if (/^[0-9a-fA-F]{6}$/.test(bare)) return "#" + bare;
+  if (/^[0-9a-fA-F]{8}$/.test(bare)) return "#" + bare;
+  return s;
+}
+
 /** Validates that a string is a valid CSS identifier (for JSON keys, CSS var names) */
 export const isValidCSSIdentifier = (s: string) => /^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(s);
 

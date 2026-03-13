@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import type { PrimGroup, Primitives, ColorToken, SpacingToken, Typography, TextStyle, RadiusToken, BorderToken, ShadowToken, ZIndexToken, BreakpointToken, CustomCollection } from "./types";
-import { ALL_TABS, DEFAULT_ENABLED, DEFAULT_COLOR_GROUPS, DEFAULT_TS_GROUPS, STORAGE_KEY, buildDefaultPrimitives, buildDefaultPrimGroups, defaultTextStyles, defaultColors, defaultSpacing, defaultTypography, defaultRadius, defaultBorders, defaultShadows, defaultZIndex, defaultBreakpoints, TS_DECORATION_OPTIONS, FONT_FAMILIES, initIdCounter, uid, matchesSearch, loadSaved, isValidCSSIdentifier, sanitizeNumberInput, findDuplicateNames, findDuplicateNamesInGroups } from "./defaults";
-import { genPrimitivesJSON, genColorsJSON, genSpacingJSON, genTypographyJSON, genTextStylesJSON, genRadiusJSON, genBorderJSON, genShadowsJSON, genZIndexJSON, genBreakpointsJSON, genCustomJSON } from "./generators";
-import { useDraggable, useGroupDrag, GROUP_DRAG_TYPE } from "./hooks";
-import { AddRowBtn, TabHeader, DraggableRow, InlineLabel, PrimSelector, TextPreview, ShadowRow } from "./components";
+import { ALL_TABS, DEFAULT_ENABLED, DEFAULT_COLOR_GROUPS, DEFAULT_TS_GROUPS, STORAGE_KEY, buildDefaultPrimitives, buildDefaultPrimGroups, defaultTextStyles, defaultColors, defaultSpacing, defaultTypography, defaultRadius, defaultBorders, defaultShadows, defaultZIndex, defaultBreakpoints, FONT_FAMILIES, initIdCounter, uid, loadSaved, findDuplicateNames, findDuplicateNamesInGroups } from "./defaults";
+import { genPrimitivesJSON, genColorsJSON, genSpacingJSON, genTypographyJSON, genTextStylesJSON, genRadiusJSON, genBorderJSON, genShadowsJSON, genZIndexJSON, genBreakpointsJSON, genCustomJSON, dlJSON } from "./generators";
+import { useDraggable, useGroupDrag } from "./hooks";
 import { DownloadPanel } from "./DownloadPanel";
+import { PrimitivesTab, ColorsTab, SpacingTab, TypographyTab, TextStylesTab, RadiusTab, BorderTab, ShadowsTab, ZIndexTab, BreakpointsTab, CustomTab } from "./tabs";
 
 initIdCounter();
 
@@ -36,7 +36,7 @@ export default function App() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-  const ccDragRef = useRef<Record<number, { dragId: number|null; overId: number|null }>>({});
+
 
   const toggleSelect = useCallback((id: number) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }), []);
   const toggleSelectAll = useCallback((ids: number[]) => setSelected(prev => {
@@ -239,6 +239,10 @@ export default function App() {
   const isDupe = (name: string, dupes: Set<string>) => dupes.has(name.trim().toLowerCase());
 
   // ── Reset ───────────────────────────────────────────────────────────────────
+  const exportBackup = () => {
+    const backup = JSON.stringify({ tab, enabledTabs: [...enabledTabs], primGroups, primitives, colorGroups, colors, spacing, typography, textStyles, tsGroups, radius, borders, shadows, zindex, breakpoints, customCollections, theme }, null, 2);
+    dlJSON(backup, "figma-variables-backup-" + new Date().toISOString().slice(0,10) + ".json");
+  };
   const handleReset = () => {
     setPrimGroups(buildDefaultPrimGroups()); setPrimitives(buildDefaultPrimitives());
     setColors(defaultColors); setColorGroups([...DEFAULT_COLOR_GROUPS]);
@@ -369,6 +373,11 @@ export default function App() {
   };
 
   // ── Generic list helpers ────────────────────────────────────────────────────
+  const trimNameOnBlur = <T extends { id: number; name: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>, id: number, current: string) => {
+    const trimmed = current.trim();
+    if (trimmed !== current) setter(prev => prev.map(i => i.id === id ? { ...i, name: trimmed || "unnamed" } : i));
+    else if (!trimmed) setter(prev => prev.map(i => i.id === id ? { ...i, name: "unnamed" } : i));
+  };
   const updateColor = (id: number, f: string, v: string) => setColors(c => c.map(i => i.id===id ? {...i,[f]:v} : i));
   const dupColor    = (id: number) => setColors(c => { const idx=c.findIndex(i=>i.id===id); if(idx<0)return c; const copy={...c[idx],id:uid(),name:c[idx].name+" copy"}; const next=[...c]; next.splice(idx+1,0,copy); return next; });
   const updateList  = <T extends { id: number }>(setter: React.Dispatch<React.SetStateAction<T[]>>, id: number, f: string, v: string) => setter(prev => prev.map(i => i.id===id ? {...i,[f]:v} : i));
@@ -396,7 +405,7 @@ export default function App() {
   const addColorGroup    = () => setColorGroups(g=>[...g,"group-"+uid()]);
   const renameColorGroup = (o: string, n: string) => { const t=n.trim(); if(!t||(colorGroups.includes(t)&&t!==o))return; setColorGroups(g=>g.map(x=>x===o?t:x)); setColors(c=>c.map(i=>i.group===o?{...i,group:t}:i)); };
   const deleteColorGroup = (n: string) => { setColorGroups(g=>g.filter(x=>x!==n)); setColors(c=>c.filter(i=>i.group!==n)); };
-  const bpRange = (b: BreakpointToken) => (b.value?">= "+b.value+"px":"0")+(b.max?" and < "+b.max+"px":"");
+
 
   // ── Bulk actions ────────────────────────────────────────────────────────────
   const bulkDelete = () => {
@@ -480,6 +489,7 @@ export default function App() {
           {showResetConfirm ? (
             <div className="reset-confirm">
               <span className="reset-confirm__text">Reset everything?</span>
+              <button onClick={exportBackup} className="reset-confirm__cancel">Export backup first</button>
               <button onClick={handleReset} className="reset-confirm__yes">Yes, reset</button>
               <button onClick={()=>setShowResetConfirm(false)} className="reset-confirm__cancel">Cancel</button>
             </div>
@@ -531,497 +541,90 @@ export default function App() {
         {/* Content */}
         <div className="content">
 
-          {/* PRIMITIVES */}
           {tab==="Primitives" && (
-            <div>
-              <TabHeader title="Primitive Colors" description="Raw palette. Click a name to rename. Never apply directly to layers."
-                actions={tabActions(<button onClick={addPrimGroup} className="tab-add-btn">+ Add Palette</button>)} search={search} onSearch={setSearch} />
-              {primGroups.filter(g => matchesSearch(search, g.label, g.key, ...g.shades)).map(g => (
-                <div key={g.id} {...primGroupDrag.makeDropZone(String(g.id))} className="mb-32">
-                  <div className="hdr-style"><div draggable onDragStart={e=>primGroupDrag.onDragStart(e,String(g.id))} className="drag-handle">⌿</div><InlineLabel value={g.label} prefix="primitives / " onCommit={(nl: string)=>renamePrimGroup(g.key,nl)} /><div className="section-divider" /><button onClick={()=>deletePrimGroup(g.key)} className="del-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>x delete palette</button></div>
-                  <div className="prim-shades">
-                    {g.shades.map(shade => (
-                      <div key={shade} className="prim-shade">
-                        <div className="prim-swatch-wrap">
-                          <div className="prim-swatch" style={{background:primitives[g.key]?.[shade]||"#808080"}} />
-                          <input type="color" value={primitives[g.key]?.[shade]||"#808080"} onChange={e=>setPrimitives(p=>({...p,[g.key]:{...p[g.key],[shade]:e.target.value}}))} className="prim-color-input" />
-                        </div>
-                        <InlineLabel value={shade} onCommit={(ns: string)=>renameShade(g.key,shade,ns)} style={{fontSize:11,color:"var(--text-secondary)",textAlign:"center"}} />
-                        <input value={primitives[g.key]?.[shade]||""} onChange={e=>setPrimitives(p=>({...p,[g.key]:{...p[g.key],[shade]:e.target.value}}))} className="prim-hex" />
-                        <button onClick={()=>removeShade(g.key,shade)} className="del-btn" style={{fontSize:11,padding:0,lineHeight:1}}>x</button>
-                      </div>
-                    ))}
-                    <div style={{display:"flex",alignItems:"center",height:56}}><button onClick={()=>addShade(g.key)} className="prim-add-shade">+</button></div>
-                  </div>
-                </div>
-              ))}
-              <div className="mb-28">
-                <div className="hdr-style"><span>primitives / Base</span><div className="section-divider" /></div>
-                <div style={{display:"flex",gap:12}}>
-                  {["white","black"].map(k => (
-                    <div key={k} className="prim-shade">
-                      <div className="prim-swatch-wrap">
-                        <div className="prim-swatch" style={{background:primitives.base?.[k]||"#000"}} />
-                        <input type="color" value={primitives.base?.[k]||"#000000"} onChange={e=>setPrimitives(p=>({...p,base:{...p.base,[k]:e.target.value}}))} className="prim-color-input" />
-                      </div>
-                      <div className="text-xs text-secondary">{k}</div>
-                      <input value={primitives.base?.[k]||""} onChange={e=>setPrimitives(p=>({...p,base:{...p.base,[k]:e.target.value}}))} className="prim-hex" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <PrimitivesTab primGroups={primGroups} setPrimitives={setPrimitives} primitives={primitives}
+              primGroupDrag={primGroupDrag} renamePrimGroup={renamePrimGroup} deletePrimGroup={deletePrimGroup}
+              addPrimGroup={addPrimGroup} addShade={addShade} removeShade={removeShade} renameShade={renameShade}
+              search={search} setSearch={setSearch} tabActions={tabActions} />
           )}
 
-          {/* COLORS */}
           {tab==="Colors" && (
-            <div>
-              <TabHeader title="Semantic Color Tokens" description="Downloads as two files: colors-light.json and colors-dark.json."
-                actions={tabActions(<button onClick={addColorGroup} className="tab-add-btn">+ Add Group</button>)} search={search} onSearch={setSearch} />
-              {colorGroups.map(g => {
-                const filtered = groupedColors[g].filter(c => matchesSearch(search, g, c.name, c.description, c.light, c.dark));
-                if (search && filtered.length === 0) return null;
-                return (
-                <div key={g} {...colorGroupDrag.makeDropZone(g)} className="mb-28">
-                  <div className="hdr-style"><div draggable onDragStart={e=>colorGroupDrag.onDragStart(e,g)} className="drag-handle">⌿</div><InlineLabel value={g} prefix="color / " onCommit={(n: string)=>renameColorGroup(g,n)} /><div className="section-divider" /><button onClick={()=>{const nn=g+" copy";setColorGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setColors(c=>[...c,...c.filter(i=>i.group===g).map(i=>({...i,id:uid(),group:nn}))]);}} className="dup-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteColorGroup(g)} className="del-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button></div>
-                  {filtered.length===0 && <div className="empty-msg">No tokens yet.</div>}
-                  {filtered.length > 0 && (
-                    <div>
-                      <div className="col-hdr">
-                        {selectAllChk(filtered.map(c=>c.id))}
-                        <div className="drag-handle drag-handle--hidden">⌿</div>
-                        <div className="flex-1 grid-row grid-colors">
-                        {["Group","Name","Light","Dark",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
-                        </div>
-                      </div>
-                      {filtered.map(c => (
-                        <DraggableRow key={c.id} id={c.id} dragHandlers={colorDrag} checked={selected.has(c.id)} onCheck={toggleSelect}>
-                          <div className="grid-row grid-colors" style={{alignItems:"start"}}>
-                            <select value={c.group} onChange={e=>updateColor(c.id,"group",e.target.value)} className="inp inp--full">{colorGroups.map(g2=><option key={g2}>{g2}</option>)}</select>
-                            <div><input value={c.name} onChange={e=>updateColor(c.id,"name",e.target.value)} className={`inp inp--full${isDupe(c.name,dupeColors)?" inp--dupe":""}`} />{isDupe(c.name,dupeColors)&&<div className="dupe-warn">Duplicate name in group</div>}<input value={c.description} onChange={e=>updateColor(c.id,"description",e.target.value)} placeholder="Description" className="inp inp--full inp--desc" /></div>
-                            <PrimSelector value={c.light} primitives={primitives} primGroups={primGroups} onChange={(v: string)=>updateColor(c.id,"light",v)} mode="Light" />
-                            <PrimSelector value={c.dark}  primitives={primitives} primGroups={primGroups} onChange={(v: string)=>updateColor(c.id,"dark",v)}  mode="Dark" />
-                            <div className="btn-group" style={{paddingTop:8}}><button onClick={()=>dupColor(c.id)} className="dup-btn">⧉</button><button onClick={()=>setColors(c2=>c2.filter(i=>i.id!==c.id))} className="del-btn" style={{fontSize:18}}>x</button></div>
-                          </div>
-                        </DraggableRow>
-                      ))}
-                    </div>
-                  )}
-                  <AddRowBtn onClick={()=>setColors(c=>[...c,{id:uid(),group:g,name:"new-color",light:"{primitives.blue.600}",dark:"{primitives.blue.400}",description:""}])} label={"+ Add token to "+g} />
-                </div>
-              );})}
-            </div>
+            <ColorsTab colors={colors} setColors={setColors} colorGroups={colorGroups} setColorGroups={setColorGroups}
+              groupedColors={groupedColors} colorDrag={colorDrag} colorGroupDrag={colorGroupDrag}
+              primitives={primitives} primGroups={primGroups} selected={selected} toggleSelect={toggleSelect}
+              selectAllChk={selectAllChk} search={search} setSearch={setSearch} tabActions={tabActions}
+              updateColor={updateColor} dupColor={dupColor} isDupe={isDupe} dupeColors={dupeColors}
+              trimNameOnBlur={trimNameOnBlur} addColorGroup={addColorGroup} renameColorGroup={renameColorGroup}
+              deleteColorGroup={deleteColorGroup} uid={uid} />
           )}
 
-          {/* SPACING */}
           {tab==="Spacing" && (
-            <div>
-              <TabHeader title="Spacing Tokens" description="4px base scale. Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div className="col-hdr">
-                {selectAllChk(spacing.map(s=>s.id))}
-                <div className="drag-handle drag-handle--hidden">⌿</div>
-                <div className="flex-1 grid-row grid-spacing">
-                {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
-                </div>
-              </div>
-              {spacing.filter(sp => matchesSearch(search, sp.name, sp.value)).map(sp => (
-                <DraggableRow key={sp.id} id={sp.id} dragHandlers={spacingDrag} checked={selected.has(sp.id)} onCheck={toggleSelect}>
-                  <div className="grid-row grid-spacing">
-                    <span className="prefix">spacing /</span>
-                    <div><input value={sp.name} onChange={e=>updateList(setSpacing,sp.id,"name",e.target.value)} className={`inp inp--full${isDupe(sp.name,dupeSpacing)?" inp--dupe":""}`} />{isDupe(sp.name,dupeSpacing)&&<div className="dupe-warn">Duplicate name</div>}</div>
-                    <div className="flex-row"><input value={sp.value} onChange={e=>updateList(setSpacing,sp.id,"value",sanitizeNumberInput(e.target.value,sp.value))} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
-                    <div className="flex-row gap-8"><div className="spacing-bar" style={{width:Math.min(parseInt(sp.value)||0,220)+"px"}} /><span className="prefix">{sp.value}px</span></div>
-                    <div className="btn-group"><button onClick={()=>dupInList(setSpacing,sp.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setSpacing,sp.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
-                  </div>
-                </DraggableRow>
-              ))}
-              <AddRowBtn onClick={()=>setSpacing(s=>[...s,{id:uid(),name:"new",value:"0"}])} label="+ Add spacing token" />
-            </div>
+            <SpacingTab spacing={spacing} setSpacing={setSpacing} spacingDrag={spacingDrag}
+              search={search} setSearch={setSearch} tabActions={tabActions} selectAllChk={selectAllChk}
+              selected={selected} toggleSelect={toggleSelect} updateList={updateList} deleteList={deleteList}
+              dupInList={dupInList} dupeSpacing={dupeSpacing} isDupe={isDupe} trimNameOnBlur={trimNameOnBlur} uid={uid} />
           )}
 
-          {/* TYPOGRAPHY */}
           {tab==="Typography" && (
-            <div>
-              <TabHeader title="Typography Tokens" description="Font families, sizes, weights and line heights. For composite text styles, use the Text Styles tab." actions={tabActions()} search={search} onSearch={setSearch} />
-              {(["families","sizes","weights","lineHeights"] as const).map((key, ki) => { const labels=["font / family","font / size","font / weight","font / line-height"]; const units=["","px","",""]; const label=labels[ki]; const unit=units[ki]; return (
-                <div key={key} className="mb-28">
-                  <div style={{marginBottom:8}}><span className="col-hdr-label" style={{fontSize:12,letterSpacing:"0.07em"}}>{label} — drag to reorder</span></div>
-                  <div className="col-hdr">
-                    {selectAllChk(typography[key].map(i=>i.id))}
-                    <div className="drag-handle drag-handle--hidden">⌿</div>
-                    <div className="flex-1 grid-row grid-typo">
-                    {["Name","Value",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
-                    </div>
-                  </div>
-                  {typography[key].filter(item => matchesSearch(search, item.name, item.value)).map(item => (
-                    <DraggableRow key={item.id} id={item.id} dragHandlers={typoDragMap[key]} checked={selected.has(item.id)} onCheck={toggleSelect}>
-                      <div className="grid-row grid-typo">
-                        <input value={item.name} onChange={e=>setTypography(t=>({...t,[key]:t[key].map(i=>i.id===item.id?{...i,name:e.target.value}:i)}))} className="inp" />
-                        <div className="flex-row">{key==="families" ? (
-                          <select value={item.value} onChange={e=>setTypography(t=>({...t,[key]:t[key].map(i=>i.id===item.id?{...i,value:e.target.value}:i)}))} className="inp inp--full inp--sm" style={{fontFamily:item.value}}>
-                            {FONT_FAMILIES.map(f=><option key={f.value} value={f.value} style={{fontFamily:f.value}}>{f.label}</option>)}
-                            {!FONT_FAMILIES.some(f=>f.value===item.value) && <option value={item.value}>{item.value}</option>}
-                          </select>
-                        ) : (
-                          <input value={item.value} onChange={e=>setTypography(t=>({...t,[key]:t[key].map(i=>i.id===item.id?{...i,value:e.target.value}:i)}))} className="inp inp--full inp--mono" />
-                        )}{unit && <span className="unit">{unit}</span>}</div>
-                        <div className="btn-group"><button onClick={()=>setTypography(t=>{const arr=[...t[key]];const idx=arr.findIndex(i=>i.id===item.id);if(idx<0)return t;arr.splice(idx+1,0,{...arr[idx],id:uid(),name:arr[idx].name+" copy"});return{...t,[key]:arr};})} className="dup-btn">⧉</button><button onClick={()=>setTypography(t=>({...t,[key]:t[key].filter(i=>i.id!==item.id)}))} className="del-btn" style={{fontSize:18}}>x</button></div>
-                      </div>
-                    </DraggableRow>
-                  ))}
-                  <AddRowBtn onClick={()=>setTypography(t=>({...t,[key]:[...t[key],{id:uid(),name:"new",value:""}]}))} label={"+ Add "+label.split(" / ").slice(1).join(" ")+" token"} />
-                </div>
-              );})}
-            </div>
+            <TypographyTab typography={typography} setTypography={setTypography} typoDragMap={typoDragMap}
+              search={search} setSearch={setSearch} tabActions={tabActions} selectAllChk={selectAllChk}
+              selected={selected} toggleSelect={toggleSelect} uid={uid} />
           )}
 
-          {/* TEXT STYLES */}
           {tab==="Text Styles" && (
-            <div>
-              <TabHeader title="Text Styles"
-                description="Composite typography styles — each defines a full font stack. Exports as text-styles.json for the plugin importer."
-                actions={tabActions(<button onClick={addTsGroup} className="tab-add-btn">+ Add Group</button>)} search={search} onSearch={setSearch} />
-
-              {tsGroups.map(g => {
-                const filteredTs = (groupedTextStyles[g]||[]).filter(s => matchesSearch(search, g, s.name, s.fontFamily, s.fontSize, s.fontWeight));
-                if (search && filteredTs.length === 0) return null;
-                return (
-                <div key={g} {...tsGroupDrag.makeDropZone(g)} className="mb-32">
-                  <div className="hdr-style">
-                    <div draggable onDragStart={e=>tsGroupDrag.onDragStart(e,g)} className="drag-handle">⌿</div>
-                    <InlineLabel value={g} prefix="text / " onCommit={(n: string)=>renameTsGroup(g,n)} />
-                    <div className="section-divider" />
-                    <button onClick={()=>{const nn=g+" copy";setTsGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setTextStyles(ts=>[...ts,...ts.filter(s=>s.group===g).map(s=>({...s,id:uid(),group:nn,name:s.name+" copy"}))]);}} className="dup-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteTsGroup(g)} className="del-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
-                  </div>
-
-                  <div className="col-hdr">
-                    {selectAllChk(filteredTs.map(s=>s.id))}
-                    <div className="drag-handle drag-handle--hidden">⌿</div>
-                    <div className="flex-1 grid-row grid-ts">
-                    {["Name","Font Family","Size (px)","Weight","Line Height (em)","Letter Spacing (%)","Paragraph Spacing (px)","Decoration","Preview",""].map((h,i)=><div key={i} className="col-hdr-label col-hdr-label--nowrap">{h}</div>)}
-                    </div>
-                  </div>
-
-                  {filteredTs.map(s => (
-                    <DraggableRow key={s.id} id={s.id} dragHandlers={textStylesDrag} checked={selected.has(s.id)} onCheck={toggleSelect}>
-                      <div className="grid-row grid-ts">
-                        <div><input value={s.name} onChange={e=>updateTextStyle(s.id,"name",e.target.value)} className={`inp inp--full${isDupe(s.name,dupeTextStyles)?" inp--dupe":""}`} />{isDupe(s.name,dupeTextStyles)&&<div className="dupe-warn">Duplicate name</div>}</div>
-                        <select value={s.fontFamily} onChange={e=>updateTextStyle(s.id,"fontFamily",e.target.value)} className="inp inp--full inp--sm" style={{fontFamily:s.fontFamily}}>
-                          {FONT_FAMILIES.map(f=><option key={f.value} value={f.value} style={{fontFamily:f.value}}>{f.label}</option>)}
-                          {!FONT_FAMILIES.some(f=>f.value===s.fontFamily) && <option value={s.fontFamily}>{s.fontFamily}</option>}
-                        </select>
-                        <div className="flex-row"><input value={s.fontSize} onChange={e=>updateTextStyle(s.id,"fontSize",e.target.value)} className="inp inp--full inp--mono inp--sm" /></div>
-                        <input value={s.fontWeight} onChange={e=>updateTextStyle(s.id,"fontWeight",e.target.value)} className="inp inp--full inp--mono inp--sm" />
-                        <input value={s.lineHeight} onChange={e=>updateTextStyle(s.id,"lineHeight",e.target.value)} className="inp inp--full inp--mono inp--sm" />
-                        <div className="flex-row"><input value={s.letterSpacing} onChange={e=>updateTextStyle(s.id,"letterSpacing",e.target.value)} className="inp inp--full inp--mono inp--sm" /></div>
-                        <div className="flex-row"><input value={s.paragraphSpacing} onChange={e=>updateTextStyle(s.id,"paragraphSpacing",e.target.value)} className="inp inp--full inp--mono inp--sm" /></div>
-                        <select value={s.textDecoration} onChange={e=>updateTextStyle(s.id,"textDecoration",e.target.value)} className="inp inp--full inp--sm">
-                          {TS_DECORATION_OPTIONS.map(d=><option key={d} value={d}>{d.charAt(0)+d.slice(1).toLowerCase()}</option>)}
-                        </select>
-                        <TextPreview style={s} />
-                        <div className="btn-group"><button onClick={()=>dupTextStyle(s.id)} className="dup-btn">⧉</button><button onClick={()=>deleteTextStyle(s.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
-                      </div>
-                    </DraggableRow>
-                  ))}
-
-                  <AddRowBtn onClick={()=>addTextStyle(g)} label={"+ Add style to "+g} />
-                </div>
-                );
-              })}
-
-              {tsGroups.length === 0 && <div className="empty-msg empty-msg--centered">No groups yet. Click "+ Add Group" to start.</div>}
-            </div>
+            <TextStylesTab textStyles={textStyles} setTextStyles={setTextStyles} tsGroups={tsGroups} setTsGroups={setTsGroups}
+              groupedTextStyles={groupedTextStyles} textStylesDrag={textStylesDrag} tsGroupDrag={tsGroupDrag}
+              search={search} setSearch={setSearch} tabActions={tabActions} selectAllChk={selectAllChk}
+              selected={selected} toggleSelect={toggleSelect} updateTextStyle={updateTextStyle}
+              dupTextStyle={dupTextStyle} deleteTextStyle={deleteTextStyle} addTextStyle={addTextStyle}
+              addTsGroup={addTsGroup} renameTsGroup={renameTsGroup} deleteTsGroup={deleteTsGroup}
+              isDupe={isDupe} dupeTextStyles={dupeTextStyles} trimNameOnBlur={trimNameOnBlur} uid={uid} />
           )}
 
-          {/* RADIUS */}
           {tab==="Radius" && (
-            <div>
-              <TabHeader title="Border Radius Tokens" description="Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div className="radius-select-all">{selectAllChk(radius.map(r=>r.id))}<span className="radius-select-label">Select all</span></div>
-              <div className="radius-cards">
-                {radius.filter(r => matchesSearch(search, r.name, r.value)).map(r => (
-                  <div key={r.id} draggable onDragStart={()=>radiusDrag.onDragStart(r.id)} onDragOver={e=>radiusDrag.onDragOver(e,r.id)} onDrop={()=>radiusDrag.onDrop()} onDragEnd={()=>radiusDrag.onDragEnd()} className={`radius-card ${selected.has(r.id)?"radius-card--selected":"radius-card--default"}`}>
-                    <input type="checkbox" checked={selected.has(r.id)} onChange={()=>toggleSelect(r.id)} className="chk radius-chk" />
-                    <div className="radius-preview" style={{borderRadius:Math.min(parseInt(r.value)||0,30)+"px"}} />
-                    <div><input value={r.name} onChange={e=>updateList(setRadius,r.id,"name",e.target.value)} className={`inp inp--full inp--center inp--compact${isDupe(r.name,dupeRadius)?" inp--dupe":""}`} />{isDupe(r.name,dupeRadius)&&<div className="dupe-warn">Duplicate</div>}</div>
-                    <div className="flex-row w-full"><input value={r.value} onChange={e=>updateList(setRadius,r.id,"value",sanitizeNumberInput(e.target.value,r.value,0))} className="inp inp--center inp--mono inp--compact" style={{flex:1,width:0}} /><span className="unit">px</span></div>
-                    <div className="btn-group"><button onClick={()=>dupInList(setRadius,r.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setRadius,r.id)} className="del-btn" style={{fontSize:12}}>Remove</button></div>
-                  </div>
-                ))}
-              </div>
-              <AddRowBtn onClick={()=>setRadius(r=>[...r,{id:uid(),name:"new",value:"0"}])} label="+ Add radius token" />
-            </div>
+            <RadiusTab radius={radius} setRadius={setRadius} radiusDrag={radiusDrag}
+              search={search} setSearch={setSearch} tabActions={tabActions} selectAllChk={selectAllChk}
+              selected={selected} toggleSelect={toggleSelect} updateList={updateList} deleteList={deleteList}
+              dupInList={dupInList} dupeRadius={dupeRadius} isDupe={isDupe} trimNameOnBlur={trimNameOnBlur} uid={uid} />
           )}
 
-          {/* BORDER */}
           {tab==="Border" && (
-            <div>
-              <TabHeader title="Border Width Tokens" description="Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div className="col-hdr">
-                {selectAllChk(borders.map(b=>b.id))}
-                <div className="drag-handle drag-handle--hidden">⌿</div>
-                <div className="flex-1 grid-row grid-border">
-                {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
-                </div>
-              </div>
-              {borders.filter(b => matchesSearch(search, b.name, b.value)).map(b => (
-                <DraggableRow key={b.id} id={b.id} dragHandlers={borderDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
-                  <div className="grid-row grid-border">
-                    <span className="prefix">border /</span>
-                    <div><input value={b.name} onChange={e=>updateList(setBorders,b.id,"name",e.target.value)} className={`inp inp--full${isDupe(b.name,dupeBorders)?" inp--dupe":""}`} />{isDupe(b.name,dupeBorders)&&<div className="dupe-warn">Duplicate name</div>}</div>
-                    <div className="flex-row"><input value={b.value} onChange={e=>updateList(setBorders,b.id,"value",sanitizeNumberInput(e.target.value,b.value,0))} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
-                    <div style={{display:"flex",alignItems:"center"}}><div className="border-bar" style={{height:Math.max(parseInt(b.value)||0,1),maxHeight:20}} /></div>
-                    <div className="btn-group"><button onClick={()=>dupInList(setBorders,b.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setBorders,b.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
-                  </div>
-                </DraggableRow>
-              ))}
-              <AddRowBtn onClick={()=>setBorders(b=>[...b,{id:uid(),name:"new",value:"1"}])} label="+ Add border token" />
-            </div>
+            <BorderTab borders={borders} setBorders={setBorders} borderDrag={borderDrag}
+              search={search} setSearch={setSearch} tabActions={tabActions} selectAllChk={selectAllChk}
+              selected={selected} toggleSelect={toggleSelect} updateList={updateList} deleteList={deleteList}
+              dupInList={dupInList} dupeBorders={dupeBorders} isDupe={isDupe} trimNameOnBlur={trimNameOnBlur} uid={uid} />
           )}
 
-          {/* SHADOWS */}
           {tab==="Shadows" && (
-            <div>
-              <TabHeader title="Shadow Tokens" description="Drag to reorder. Click the swatch to open the shadow picker." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div className="shadow-col-hdr">
-                {selectAllChk(shadows.map(s=>s.id))}
-                <div className="drag-handle drag-handle--hidden">⌿</div>
-                <span className="col-hdr-label flex-shrink-0" style={{width:72}}>Prefix</span>
-                <span className="col-hdr-label flex-shrink-0" style={{width:140}}>Name</span>
-                <span className="col-hdr-label flex-1">Value</span>
-                <span className="col-hdr-label flex-shrink-0" style={{width:80}}>Preview</span>
-                <span className="flex-shrink-0" style={{width:32}}></span>
-              </div>
-              {shadows.filter(sh => matchesSearch(search, sh.name, sh.value)).map(sh => (
-                <ShadowRow key={sh.id} sh={sh} dragHandlers={shadowDrag}
-                  onChangeName={(v: string)=>updateList(setShadows,sh.id,"name",v)}
-                  onChangeValue={(v: string)=>updateList(setShadows,sh.id,"value",v)}
-                  onDelete={()=>deleteList(setShadows,sh.id)}
-                  onDuplicate={()=>dupInList(setShadows,sh.id)}
-                  checked={selected.has(sh.id)} onCheck={toggleSelect}
-                  dupeWarning={isDupe(sh.name,dupeShadows)} />
-              ))}
-              <AddRowBtn onClick={()=>setShadows(s=>[...s,{id:uid(),name:"new",value:"0px 4px 12px 0px rgba(0,0,0,0.20)"}])} label="+ Add shadow token" />
-            </div>
+            <ShadowsTab shadows={shadows} setShadows={setShadows} shadowDrag={shadowDrag}
+              search={search} setSearch={setSearch} tabActions={tabActions} selectAllChk={selectAllChk}
+              selected={selected} toggleSelect={toggleSelect} updateList={updateList} deleteList={deleteList}
+              dupInList={dupInList} dupeShadows={dupeShadows} isDupe={isDupe} uid={uid} />
           )}
 
-          {/* Z-INDEX */}
           {tab==="Z-Index" && (
-            <div>
-              <TabHeader title="Z-Index Tokens" description="Stacking order reference. Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div className="col-hdr">
-                {selectAllChk(zindex.map(z=>z.id))}
-                <div className="drag-handle drag-handle--hidden">⌿</div>
-                <div className="flex-1 grid-row grid-zindex">
-                {["Prefix","Name","Value",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
-                </div>
-              </div>
-              {zindex.filter(z => matchesSearch(search, z.name, z.value)).map(z => (
-                <DraggableRow key={z.id} id={z.id} dragHandlers={zDrag} checked={selected.has(z.id)} onCheck={toggleSelect}>
-                  <div className="grid-row grid-zindex">
-                    <span className="prefix">z-index /</span>
-                    <div><input value={z.name} onChange={e=>updateList(setZIndex,z.id,"name",e.target.value)} className={`inp${isDupe(z.name,dupeZIndex)?" inp--dupe":""}`} />{isDupe(z.name,dupeZIndex)&&<div className="dupe-warn">Duplicate name</div>}</div>
-                    <input value={z.value} onChange={e=>updateList(setZIndex,z.id,"value",sanitizeNumberInput(e.target.value,z.value))} className="inp inp--mono" />
-                    <div className="btn-group"><button onClick={()=>dupInList(setZIndex,z.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setZIndex,z.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
-                  </div>
-                </DraggableRow>
-              ))}
-              <AddRowBtn onClick={()=>setZIndex(z=>[...z,{id:uid(),name:"new",value:"0"}])} label="+ Add z-index token" />
-            </div>
+            <ZIndexTab zindex={zindex} setZIndex={setZIndex} zDrag={zDrag}
+              search={search} setSearch={setSearch} tabActions={tabActions} selectAllChk={selectAllChk}
+              selected={selected} toggleSelect={toggleSelect} updateList={updateList} deleteList={deleteList}
+              dupInList={dupInList} dupeZIndex={dupeZIndex} isDupe={isDupe} trimNameOnBlur={trimNameOnBlur} uid={uid} />
           )}
 
-          {/* BREAKPOINTS */}
           {tab==="Breakpoints" && (
-            <div>
-              <TabHeader title="Breakpoint Tokens" description="Min-width based. Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div className="col-hdr">
-                {selectAllChk(breakpoints.map(b=>b.id))}
-                <div className="drag-handle drag-handle--hidden">⌿</div>
-                <div className="flex-1 grid-row grid-breakpoints">
-                {["Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
-                </div>
-              </div>
-              {breakpoints.filter(b => matchesSearch(search, b.name, b.value, b.max)).map(b => (
-                <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
-                  <div className="grid-row grid-breakpoints">
-                    <span className="prefix">breakpoint /</span>
-                    <div><input value={b.name} onChange={e=>updateList(setBreakpoints,b.id,"name",e.target.value)} className={`inp inp--full${isDupe(b.name,dupeBreakpoints)?" inp--dupe":""}`} />{isDupe(b.name,dupeBreakpoints)&&<div className="dupe-warn">Duplicate name</div>}</div>
-                    <div className="flex-row"><input value={b.value} onChange={e=>{
-                      const v = sanitizeNumberInput(e.target.value,b.value,0);
-                      setBreakpoints(list => { const ri = list.findIndex(bp => bp.id === b.id); return list.map((bp, i) => {
-                        if (i === ri) return { ...bp, value: v };
-                        if (i === ri - 1) return { ...bp, max: v };
-                        return bp;
-                      }); });
-                    }} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
-                    <div className="flex-row"><input value={b.max} onChange={e=>{
-                      const v = sanitizeNumberInput(e.target.value,b.max,0);
-                      setBreakpoints(list => { const ri = list.findIndex(bp => bp.id === b.id); return list.map((bp, i) => {
-                        if (i === ri) return { ...bp, max: v };
-                        if (i === ri + 1) return { ...bp, value: v };
-                        return bp;
-                      }); });
-                    }} placeholder="none" className="inp inp--full inp--mono" /><span className="unit">px</span></div>
-                    <div className="prefix mono">{bpRange(b)}</div>
-                    <div className="btn-group"><button onClick={()=>dupInList(setBreakpoints,b.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setBreakpoints,b.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
-                  </div>
-                </DraggableRow>
-              ))}
-              <AddRowBtn onClick={()=>setBreakpoints(b=>[...b,{id:uid(),name:"new",value:"",max:""}])} label="+ Add breakpoint token" />
-            </div>
+            <BreakpointsTab breakpoints={breakpoints} setBreakpoints={setBreakpoints} breakpointDrag={breakpointDrag}
+              search={search} setSearch={setSearch} tabActions={tabActions} selectAllChk={selectAllChk}
+              selected={selected} toggleSelect={toggleSelect} updateList={updateList} deleteList={deleteList}
+              dupInList={dupInList} dupeBreakpoints={dupeBreakpoints} isDupe={isDupe} trimNameOnBlur={trimNameOnBlur} uid={uid} />
           )}
 
-          {/* CUSTOM COLLECTIONS */}
           {customCollections.map(cc => tab === cc.name && (
-            <div key={cc.id}>
-              <TabHeader title={cc.name} description={`Custom collection — exports as ${cc.jsonKey}.json`}
-                actions={tabActions(<button onClick={() => addCustomGroup(cc.id)} disabled={!cc.locked} className="tab-add-btn" style={{opacity: cc.locked ? 1 : 0.4, cursor: cc.locked ? "pointer" : "default"}}>+ Add Group</button>)} search={search} onSearch={setSearch} />
-
-              <div className="cc-settings">
-                <label className="cc-settings__label">
-                  Tab Name
-                  <input value={cc.name} disabled={cc.locked} onChange={e => {
-                    const old = cc.name;
-                    const nv = e.target.value;
-                    setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, name: nv } : c));
-                    setEnabledTabs(prev => { const next = new Set(prev); if (next.has(old)) { next.delete(old); next.add(nv); } return next; });
-                    setTab(nv);
-                  }} className={`inp${cc.locked?" inp--locked":""}`} style={{width:120}} />
-                </label>
-                <label className="cc-settings__label">
-                  JSON Key
-                  <input value={cc.jsonKey} disabled={cc.locked} onChange={e => {
-                    const v = e.target.value.replace(/[^a-zA-Z0-9_-]/g, "");
-                    updateCustomCollection(cc.id, "jsonKey", v);
-                  }} className={`inp inp--mono${cc.locked?" inp--locked":""}${!cc.locked&&cc.jsonKey&&!isValidCSSIdentifier(cc.jsonKey)?" inp--invalid":""}`} style={{width:120}} />
-                  {!cc.locked&&cc.jsonKey&&!isValidCSSIdentifier(cc.jsonKey)&&<div className="dupe-warn">Must start with a letter/underscore</div>}
-                </label>
-                <div className="cc-settings__actions">
-                  {cc.locked ? (
-                    cc.items.length === 0 && <button onClick={() => updateCustomCollection(cc.id, "locked", false)} className="tab-btn">Edit</button>
-                  ) : (
-                    <button onClick={() => updateCustomCollection(cc.id, "locked", true)} className="tab-add-btn">Save</button>
-                  )}
-                  <button onClick={() => deleteCustomCollection(cc.id)} className="cc-delete-btn">Delete Collection</button>
-                </div>
-              </div>
-
-              {(cc.groups || []).map(g => {
-                const allGroupItems = cc.items.filter(i => i.group === g.name);
-                const groupItems = allGroupItems.filter(i => matchesSearch(search, g.name, i.name, i.value));
-                if (search && groupItems.length === 0) return null;
-                const singleGroup = cc.groups.length <= 1;
-                const gLocked = g.locked !== false;
-                const valueTypeSelect = <select value={g.type + (g.unit ? "|" + g.unit : "")} disabled={gLocked} onChange={e => {
-                  const [type, unit = ""] = e.target.value.split("|");
-                  updateCustomGroup(cc.id, g.name, "type", type);
-                  updateCustomGroup(cc.id, g.name, "unit", unit);
-                }} className={`inp inp--xs${gLocked?" inp--locked":""}`} style={{width:150}}>
-                  <optgroup label="Unitless">
-                    <option value="number">Number</option>
-                    <option value="string">String</option>
-                    <option value="color">Color</option>
-                    <option value="fontFamily">Font Family</option>
-                    <option value="fontWeight">Font Weight</option>
-                  </optgroup>
-                  <optgroup label="Dimension (length)">
-                    <option value="dimension|px">Dimension — px</option>
-                    <option value="dimension|rem">Dimension — rem</option>
-                    <option value="dimension|em">Dimension — em</option>
-                    <option value="dimension|%">Dimension — %</option>
-                    <option value="dimension|vw">Dimension — vw</option>
-                    <option value="dimension|vh">Dimension — vh</option>
-                  </optgroup>
-                  <optgroup label="Duration">
-                    <option value="duration|ms">Duration — ms</option>
-                    <option value="duration|s">Duration — s</option>
-                  </optgroup>
-                  <optgroup label="Other">
-                    <option value="number|deg">Number — deg</option>
-                    <option value="cubicBezier">Cubic Bezier</option>
-                  </optgroup>
-                </select>;
-                const groupSaveEdit = gLocked ? (
-                  groupItems.length === 0 && <button onClick={() => updateCustomGroup(cc.id, g.name, "locked", false)} className="tab-btn" style={{fontSize:10,padding:"4px 8px"}}>Edit</button>
-                ) : (
-                  <button onClick={() => updateCustomGroup(cc.id, g.name, "locked", true)} className="tab-add-btn" style={{fontSize:10,padding:"4px 8px"}}>Save</button>
-                );
-                return (
-                  <div key={g.name} onDragOver={!singleGroup ? (e: React.DragEvent)=>{ if(e.dataTransfer.types.includes(GROUP_DRAG_TYPE)){e.preventDefault();e.stopPropagation();(e.currentTarget as HTMLElement).style.borderTop="2px solid var(--accent)";}} : undefined} onDragLeave={!singleGroup ? (e: React.DragEvent)=>{(e.currentTarget as HTMLElement).style.borderTop="";} : undefined} onDrop={!singleGroup ? (e: React.DragEvent)=>{(e.currentTarget as HTMLElement).style.borderTop="";const from=e.dataTransfer.getData(GROUP_DRAG_TYPE);if(!from||from===g.name)return;e.preventDefault();e.stopPropagation();setCustomCollections(ccs=>ccs.map(c=>{if(c.id!==cc.id)return c;const gs=[...c.groups];const fi=gs.findIndex(x=>x.name===from),ti=gs.findIndex(x=>x.name===g.name);if(fi<0||ti<0)return c;const[m]=gs.splice(fi,1);gs.splice(ti,0,m);return{...c,groups:gs};}));} : undefined} className="mb-28">
-                    {singleGroup ? (
-                      <div className="hdr-style" style={{justifyContent:"space-between"}}>
-                        <span className="col-hdr-label" style={{letterSpacing:"0.07em"}}>Value Type</span>
-                        {valueTypeSelect}
-                        {groupSaveEdit}
-                        <div className="flex-1" />
-                      </div>
-                    ) : (
-                      <div className="hdr-style">
-                        <div draggable onDragStart={(e: React.DragEvent)=>{e.dataTransfer.setData(GROUP_DRAG_TYPE,g.name);e.dataTransfer.effectAllowed="move";e.stopPropagation();}} className="drag-handle">⌿</div>
-                        <InlineLabel value={g.name} prefix={cc.jsonKey + " / "} onCommit={(n: string) => renameCustomGroup(cc.id, g.name, n)} />
-                        {valueTypeSelect}
-                        {groupSaveEdit}
-                        <div className="section-divider" />
-                        <button onClick={() => { const nn=g.name+" copy"; setCustomCollections(ccs=>ccs.map(c=>{if(c.id!==cc.id)return c;const idx=c.groups.findIndex(gr=>gr.name===g.name);const newGroups=[...c.groups];newGroups.splice(idx+1,0,{...g,name:nn,locked:g.locked});const newItems=[...c.items,...c.items.filter(i=>i.group===g.name).map(i=>({...i,id:uid(),group:nn}))];return{...c,groups:newGroups,items:newItems};})); }} className="dup-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={() => deleteCustomGroup(cc.id, g.name)} className="del-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
-                      </div>
-                    )}
-                    {groupItems.length === 0 && <div className="empty-msg">No tokens yet.</div>}
-                    {groupItems.length > 0 && (
-                      <div>
-                        <div className="col-hdr">
-                          {selectAllChk(groupItems.map(i=>i.id))}
-                          <div className="drag-handle drag-handle--hidden">⌿</div>
-                          <div className="flex-1 grid-row grid-custom">
-                          {["Name","Value",""].map((h,i) => <div key={i} className="col-hdr-label">{h}</div>)}
-                          </div>
-                        </div>
-                        {groupItems.map(item => (
-                          <DraggableRow key={item.id} id={item.id} checked={selected.has(item.id)} onCheck={toggleSelect} dragHandlers={{
-                            onDragStart: (id: number) => { if (!ccDragRef.current[cc.id]) ccDragRef.current[cc.id] = { dragId: null, overId: null }; ccDragRef.current[cc.id].dragId = id; },
-                            onDragOver: (e: React.DragEvent, id: number) => { e.preventDefault(); if (!ccDragRef.current[cc.id]) ccDragRef.current[cc.id] = { dragId: null, overId: null }; ccDragRef.current[cc.id].overId = id; },
-                            onDrop: () => {
-                              const d = ccDragRef.current[cc.id]; if (!d) return;
-                              const from = d.dragId, to = d.overId;
-                              if (from == null || to == null || from === to) return;
-                              setCustomCollections(ccs => ccs.map(c => {
-                                if (c.id !== cc.id) return c;
-                                const items = [...c.items];
-                                const fi = items.findIndex(i => i.id === from);
-                                const ti = items.findIndex(i => i.id === to);
-                                if (fi < 0 || ti < 0) return c;
-                                const [moved] = items.splice(fi, 1);
-                                items.splice(ti, 0, moved);
-                                return { ...c, items };
-                              }));
-                            },
-                            onDragEnd: () => { if (ccDragRef.current[cc.id]) ccDragRef.current[cc.id] = { dragId: null, overId: null }; },
-                          }}>
-                            <div className="grid-row grid-custom">
-                              <input value={item.name} onChange={e => updateCustomItem(cc.id, item.id, "name", e.target.value)} className="inp inp--full" />
-                              {g.type === "color" ? (
-                                <PrimSelector value={item.value} primitives={primitives} primGroups={primGroups} onChange={(v: string) => updateCustomItem(cc.id, item.id, "value", v)} mode="Value" />
-                              ) : g.type === "fontFamily" ? (
-                                <select value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} className="inp inp--full inp--sm" style={{fontFamily:item.value}}>
-                                  {FONT_FAMILIES.map(f => <option key={f.value} value={f.value} style={{fontFamily: f.value}}>{f.label}</option>)}
-                                  {!FONT_FAMILIES.some(f => f.value === item.value) && <option value={item.value}>{item.value}</option>}
-                                </select>
-                              ) : (
-                                <div className="flex-row">
-                                  <input value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} className="inp inp--full inp--mono" />
-                                  {g.unit && <span className="unit">{g.unit}</span>}
-                                </div>
-                              )}
-                              <div className="btn-group"><button onClick={() => dupCustomItem(cc.id, item.id)} className="dup-btn">⧉</button><button onClick={() => deleteCustomItem(cc.id, item.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
-                            </div>
-                          </DraggableRow>
-                        ))}
-                      </div>
-                    )}
-                    <AddRowBtn onClick={() => addCustomItem(cc.id, g.name)} label={`+ Add ${cc.jsonKey} token`} disabled={!cc.locked || !gLocked} />
-                  </div>
-                );
-              })}
-            </div>
+            <CustomTab key={cc.id} cc={cc} primitives={primitives} primGroups={primGroups}
+              search={search} setSearch={setSearch} tabActions={tabActions} selectAllChk={selectAllChk}
+              selected={selected} toggleSelect={toggleSelect}
+              updateCustomCollection={updateCustomCollection} deleteCustomCollection={deleteCustomCollection}
+              updateCustomItem={updateCustomItem} deleteCustomItem={deleteCustomItem} dupCustomItem={dupCustomItem}
+              addCustomItem={addCustomItem} addCustomGroup={addCustomGroup} renameCustomGroup={renameCustomGroup}
+              updateCustomGroup={updateCustomGroup} deleteCustomGroup={deleteCustomGroup}
+              setCustomCollections={setCustomCollections} setEnabledTabs={setEnabledTabs} setTab={setTab} uid={uid} />
           ))}
 
           {/* Bulk action bar */}
