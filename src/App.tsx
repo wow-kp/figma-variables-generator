@@ -203,6 +203,7 @@ const uid = () => ++_id;
 // ── Styles ────────────────────────────────────────────────────────────────────
 const inp = (extra: any={}) => ({background:"#1a1a2e",border:"1px solid #333",borderRadius:6,padding:"9px 12px",fontSize:13,color:"#fff",outline:"none",...extra});
 const delBtn: any = {background:"none",border:"none",color:"#f87171",cursor:"pointer"};
+const dupBtn: any = {background:"none",border:"none",color:"#777",cursor:"pointer",fontSize:14,padding:0,lineHeight:1,title:"Duplicate"};
 const rowBase: any = {padding:"8px 0",borderBottom:"1px solid #14141e"};
 const hdrStyle: any = {fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em",color:"#777",padding:"10px 0 6px",display:"flex",alignItems:"center",gap:8};
 
@@ -318,9 +319,9 @@ function ShadowPicker({ value, onChange }: any) {
   const p=parseShadow(value), set=(field: string,val: any)=>onChange(buildShadow({...p,[field]:val}));
   return <div style={{display:"flex",gap:20,alignItems:"center",background:"#0f0f1a",border:"1px solid #2a2a3e",borderRadius:10,padding:"16px 20px",margin:"4px 0 10px 0"}}><div style={{width:110,height:90,background:"#c8cad8",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><div style={{width:64,height:44,borderRadius:7,background:"#ffffff",boxShadow:value}} /></div><div style={{flex:1,display:"flex",flexDirection:"column",gap:9}}><ShadowSlider label="X offset" value={p.x} min={-80} max={80} onChange={(v: any)=>set("x",v)} /><ShadowSlider label="Y offset" value={p.y} min={-80} max={80} onChange={(v: any)=>set("y",v)} /><ShadowSlider label="Blur" value={p.blur} min={0} max={120} onChange={(v: any)=>set("blur",v)} /><ShadowSlider label="Spread" value={p.spread} min={-40} max={60} onChange={(v: any)=>set("spread",v)} /><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:"#777",width:52,flexShrink:0}}>Color</span><input value={p.color} onChange={e=>set("color",e.target.value)} style={inp({flex:1,fontFamily:"monospace",fontSize:11,padding:"5px 8px"})} /><label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#888",cursor:"pointer",flexShrink:0,userSelect:"none"}}><input type="checkbox" checked={p.inset} onChange={e=>set("inset",e.target.checked)} style={{accentColor:"#4f46e5"}} />inset</label></div></div></div>;
 }
-function ShadowRow({ sh, dragHandlers, onChangeName, onChangeValue, onDelete }: any) {
+function ShadowRow({ sh, dragHandlers, onChangeName, onChangeValue, onDelete, onDuplicate }: any) {
   const [open,setOpen]=useState(false), [hov,setHov]=useState(false);
-  return <div style={{borderBottom:"1px solid #14141e"}}><div draggable onDragStart={()=>dragHandlers.onDragStart(sh.id)} onDragOver={(e: any)=>dragHandlers.onDragOver(e,sh.id)} onDrop={()=>dragHandlers.onDrop()} onDragEnd={()=>dragHandlers.onDragEnd()} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0 8px 8px",cursor:hov?"grab":"default"}}><DragHandle onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} /><span style={{fontSize:12,color:"#777",flexShrink:0,width:72}}>shadow /</span><input value={sh.name} onChange={e=>onChangeName(e.target.value)} style={inp({width:140,flexShrink:0})} /><input value={sh.value} onChange={e=>onChangeValue(e.target.value)} style={inp({flex:1,fontFamily:"monospace",fontSize:12,minWidth:0})} /><ShadowSwatch value={sh.value} active={open} onClick={()=>setOpen((o: boolean)=>!o)} /><button onClick={onDelete} style={{...delBtn,fontSize:18,flexShrink:0}}>x</button></div>{open && <ShadowPicker value={sh.value} onChange={onChangeValue} />}</div>;
+  return <div style={{borderBottom:"1px solid #14141e"}}><div draggable onDragStart={()=>dragHandlers.onDragStart(sh.id)} onDragOver={(e: any)=>dragHandlers.onDragOver(e,sh.id)} onDrop={()=>dragHandlers.onDrop()} onDragEnd={()=>dragHandlers.onDragEnd()} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0 8px 8px",cursor:hov?"grab":"default"}}><DragHandle onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} /><span style={{fontSize:12,color:"#777",flexShrink:0,width:72}}>shadow /</span><input value={sh.name} onChange={e=>onChangeName(e.target.value)} style={inp({width:140,flexShrink:0})} /><input value={sh.value} onChange={e=>onChangeValue(e.target.value)} style={inp({flex:1,fontFamily:"monospace",fontSize:12,minWidth:0})} /><ShadowSwatch value={sh.value} active={open} onClick={()=>setOpen((o: boolean)=>!o)} /><button onClick={onDuplicate} style={dupBtn}>⧉</button><button onClick={onDelete} style={{...delBtn,fontSize:18,flexShrink:0}}>x</button></div>{open && <ShadowPicker value={sh.value} onChange={onChangeValue} />}</div>;
 }
 
 // ── Download panel ────────────────────────────────────────────────────────────
@@ -507,6 +508,8 @@ export default function App() {
     setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: c.items.map((i: any) => i.id === itemId ? { ...i, [field]: val } : i) } : c));
   const deleteCustomItem = (collId: number, itemId: number) =>
     setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: c.items.filter((i: any) => i.id !== itemId) } : c));
+  const dupCustomItem = (collId: number, itemId: number) =>
+    setCustomCollections(cc => cc.map(c => { if (c.id !== collId) return c; const idx=c.items.findIndex((i: any)=>i.id===itemId); if(idx<0)return c; const copy={...c.items[idx],id:uid(),name:c.items[idx].name+" copy"}; const items=[...c.items]; items.splice(idx+1,0,copy); return {...c,items}; }));
   const addCustomItem = (collId: number, group: string) =>
     setCustomCollections(cc => cc.map(c => {
       if (c.id !== collId) return c;
@@ -554,6 +557,8 @@ export default function App() {
     setTextStyles(ts => ts.map(s => s.id===id ? {...s,[field]:val} : s));
   const deleteTextStyle = (id: number) =>
     setTextStyles(ts => ts.filter(s => s.id!==id));
+  const dupTextStyle = (id: number) =>
+    setTextStyles(ts => { const idx=ts.findIndex(s=>s.id===id); if(idx<0)return ts; const copy={...ts[idx],id:uid(),name:ts[idx].name+" copy"}; const next=[...ts]; next.splice(idx+1,0,copy); return next; });
   const addTextStyle = (group: string) =>
     setTextStyles(ts => [...ts, {id:uid(),group,name:"new",fontFamily:"Inter, sans-serif",fontSize:"16",fontWeight:"400",lineHeight:"1.5",letterSpacing:"0",paragraphSpacing:"0",textDecoration:"NONE"}]);
   const addTsGroup = () => { const g="group-"+uid(); setTsGroups(gs=>[...gs,g]); };
@@ -661,8 +666,10 @@ export default function App() {
   };
 
   const updateColor = (id: number, f: string, v: any) => setColors(c => c.map(i => i.id===id ? {...i,[f]:v} : i));
+  const dupColor    = (id: number) => setColors(c => { const idx=c.findIndex(i=>i.id===id); if(idx<0)return c; const copy={...c[idx],id:uid(),name:c[idx].name+" copy"}; const next=[...c]; next.splice(idx+1,0,copy); return next; });
   const updateList  = (setter: any, id: number, f: string, v: any) => setter((prev: any[]) => prev.map(i => i.id===id ? {...i,[f]:v} : i));
   const deleteList  = (setter: any, id: number) => setter((prev: any[]) => prev.filter(i => i.id!==id));
+  const dupInList   = (setter: any, id: number) => setter((prev: any[]) => { const idx=prev.findIndex(i=>i.id===id); if(idx<0)return prev; const copy={...prev[idx],id:uid(),name:prev[idx].name+" copy"}; const next=[...prev]; next.splice(idx+1,0,copy); return next; });
 
   const renamePrimGroup = (oldKey: string, newLabel: string) => {
     const t=newLabel.trim(); if(!t)return; const nk=t.toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
@@ -886,7 +893,7 @@ export default function App() {
                 actions={tabActions(<button onClick={addColorGroup} style={tabAddBtnStyle}>+ Add Group</button>)} />
               {colorGroups.map((g: string) => (
                 <div key={g} style={{marginBottom:28}}>
-                  <div style={hdrStyle}><InlineLabel value={g} prefix="color / " onCommit={(n: string)=>renameColorGroup(g,n)} /><div style={{flex:1,height:1,background:"#1e1e30"}} /><button onClick={()=>deleteColorGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button></div>
+                  <div style={hdrStyle}><InlineLabel value={g} prefix="color / " onCommit={(n: string)=>renameColorGroup(g,n)} /><div style={{flex:1,height:1,background:"#1e1e30"}} /><button onClick={()=>{const nn=g+" copy";setColorGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setColors(c=>[...c,...c.filter(i=>i.group===g).map(i=>({...i,id:uid(),group:nn}))]);}} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteColorGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button></div>
                   {groupedColors[g].length===0 && <div style={{fontSize:12,color:"#777",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
                   {groupedColors[g].length > 0 && (
                     <div>
@@ -900,7 +907,7 @@ export default function App() {
                             <div><input value={c.name} onChange={e=>updateColor(c.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} /><input value={c.description} onChange={e=>updateColor(c.id,"description",e.target.value)} placeholder="Description" style={inp({width:"100%",boxSizing:"border-box",marginTop:6,fontSize:11,color:"#777",padding:"6px 10px",border:"1px solid #222"})} /></div>
                             <PrimSelector value={c.light} primitives={primitives} primGroups={primGroups} onChange={(v: string)=>updateColor(c.id,"light",v)} mode="Light" />
                             <PrimSelector value={c.dark}  primitives={primitives} primGroups={primGroups} onChange={(v: string)=>updateColor(c.id,"dark",v)}  mode="Dark" />
-                            <button onClick={()=>setColors((c2: any[])=>c2.filter(i=>i.id!==c.id))} style={{...delBtn,fontSize:18,paddingTop:8}}>x</button>
+                            <div style={{display:"flex",gap:2,paddingTop:8}}><button onClick={()=>dupColor(c.id)} style={dupBtn}>⧉</button><button onClick={()=>setColors((c2: any[])=>c2.filter(i=>i.id!==c.id))} style={{...delBtn,fontSize:18}}>x</button></div>
                           </div>
                         </DraggableRow>
                       ))}
@@ -926,7 +933,7 @@ export default function App() {
                     <input value={sp.name} onChange={e=>updateList(setSpacing,sp.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
                     <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={sp.value} onChange={e=>updateList(setSpacing,sp.id,"value",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"#777"}}>px</span></div>
                     <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{height:14,background:"#4f46e5",borderRadius:3,opacity:0.7,width:Math.min(parseInt(sp.value)||0,220)+"px",minWidth:2}} /><span style={{fontSize:12,color:"#777"}}>{sp.value}px</span></div>
-                    <button onClick={()=>deleteList(setSpacing,sp.id)} style={{...delBtn,fontSize:18}}>x</button>
+                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setSpacing,sp.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setSpacing,sp.id)} style={{...delBtn,fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
               ))}
@@ -956,7 +963,7 @@ export default function App() {
                         ) : (
                           <input value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} />
                         )}{unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{unit}</span>}</div>
-                        <button onClick={()=>setTypography((t: any)=>({...t,[key]:t[key].filter((i: any)=>i.id!==item.id)}))} style={{...delBtn,fontSize:18}}>x</button>
+                        <div style={{display:"flex",gap:2}}><button onClick={()=>setTypography((t: any)=>{const arr=[...t[key]];const idx=arr.findIndex((i: any)=>i.id===item.id);if(idx<0)return t;arr.splice(idx+1,0,{...arr[idx],id:uid(),name:arr[idx].name+" copy"});return{...t,[key]:arr};})} style={dupBtn}>⧉</button><button onClick={()=>setTypography((t: any)=>({...t,[key]:t[key].filter((i: any)=>i.id!==item.id)}))} style={{...delBtn,fontSize:18}}>x</button></div>
                       </div>
                     </DraggableRow>
                   ))}
@@ -978,7 +985,7 @@ export default function App() {
                   <div style={hdrStyle}>
                     <InlineLabel value={g} prefix="text / " onCommit={(n: string)=>renameTsGroup(g,n)} />
                     <div style={{flex:1,height:1,background:"#1e1e30"}} />
-                    <button onClick={()=>deleteTsGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
+                    <button onClick={()=>{const nn=g+" copy";setTsGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setTextStyles(ts=>[...ts,...ts.filter(s=>s.group===g).map(s=>({...s,id:uid(),group:nn,name:s.name+" copy"}))]);}} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteTsGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
                   </div>
 
                   {/* Column headers */}
@@ -1029,7 +1036,7 @@ export default function App() {
                         <TextPreview style={s} />
 
                         {/* Delete */}
-                        <button onClick={()=>deleteTextStyle(s.id)} style={{...delBtn,fontSize:18}}>x</button>
+                        <div style={{display:"flex",gap:2}}><button onClick={()=>dupTextStyle(s.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteTextStyle(s.id)} style={{...delBtn,fontSize:18}}>x</button></div>
                       </div>
                     </DraggableRow>
                   ))}
@@ -1052,7 +1059,7 @@ export default function App() {
                     <div style={{width:60,height:60,background:"#4f46e5",opacity:0.75,borderRadius:Math.min(parseInt(r.value)||0,30)+"px",flexShrink:0}} />
                     <input value={r.name} onChange={e=>updateList(setRadius,r.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",textAlign:"center",padding:"7px 8px"})} />
                     <div style={{display:"flex",gap:6,alignItems:"center",width:"100%"}}><input value={r.value} onChange={e=>updateList(setRadius,r.id,"value",e.target.value)} style={inp({flex:1,width:0,textAlign:"center",fontFamily:"monospace",padding:"7px 8px"})} /><span style={{fontSize:12,color:"#777",flexShrink:0}}>px</span></div>
-                    <button onClick={()=>deleteList(setRadius,r.id)} style={{...delBtn,fontSize:12}}>Remove</button>
+                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setRadius,r.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setRadius,r.id)} style={{...delBtn,fontSize:12}}>Remove</button></div>
                   </div>
                 ))}
               </div>
@@ -1074,7 +1081,7 @@ export default function App() {
                     <input value={b.name} onChange={e=>updateList(setBorders,b.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
                     <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.value} onChange={e=>updateList(setBorders,b.id,"value",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"#777"}}>px</span></div>
                     <div style={{display:"flex",alignItems:"center"}}><div style={{width:80,height:Math.max(parseInt(b.value)||0,1),maxHeight:20,background:"#4f46e5",borderRadius:2,opacity:0.8}} /></div>
-                    <button onClick={()=>deleteList(setBorders,b.id)} style={{...delBtn,fontSize:18}}>x</button>
+                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setBorders,b.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setBorders,b.id)} style={{...delBtn,fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
               ))}
@@ -1093,7 +1100,8 @@ export default function App() {
                 <ShadowRow key={sh.id} sh={sh} dragHandlers={shadowDrag}
                   onChangeName={(v: string)=>updateList(setShadows,sh.id,"name",v)}
                   onChangeValue={(v: string)=>updateList(setShadows,sh.id,"value",v)}
-                  onDelete={()=>deleteList(setShadows,sh.id)} />
+                  onDelete={()=>deleteList(setShadows,sh.id)}
+                  onDuplicate={()=>dupInList(setShadows,sh.id)} />
               ))}
               <AddRowBtn onClick={()=>setShadows((s: any[])=>[...s,{id:uid(),name:"new",value:"0px 4px 12px 0px rgba(0,0,0,0.20)"}])} label="+ Add shadow token" />
             </div>
@@ -1112,7 +1120,7 @@ export default function App() {
                     <span style={{fontSize:12,color:"#777"}}>z-index /</span>
                     <input value={z.name} onChange={e=>updateList(setZIndex,z.id,"name",e.target.value)} style={inp()} />
                     <input value={z.value} onChange={e=>updateList(setZIndex,z.id,"value",e.target.value)} style={inp({fontFamily:"monospace"})} />
-                    <div /><button onClick={()=>deleteList(setZIndex,z.id)} style={{...delBtn,fontSize:18}}>x</button>
+                    <div /><div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setZIndex,z.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setZIndex,z.id)} style={{...delBtn,fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
               ))}
@@ -1149,7 +1157,7 @@ export default function App() {
                       }));
                     }} placeholder="none" style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"#777",flexShrink:0}}>px</span></div>
                     <div style={{fontSize:12,color:"#777",fontFamily:"monospace"}}>{bpRange(b)}</div>
-                    <button onClick={()=>deleteList(setBreakpoints,b.id)} style={{...delBtn,fontSize:18}}>x</button>
+                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setBreakpoints,b.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setBreakpoints,b.id)} style={{...delBtn,fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
               ))}
@@ -1242,7 +1250,7 @@ export default function App() {
                         {valueTypeSelect}
                         {groupSaveEdit}
                         <div style={{flex:1,height:1,background:"#1e1e30"}} />
-                        <button onClick={() => deleteCustomGroup(cc.id, g.name)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
+                        <button onClick={() => { const nn=g.name+" copy"; setCustomCollections(ccs=>ccs.map(c=>{if(c.id!==cc.id)return c;const idx=c.groups.findIndex((gr: any)=>gr.name===g.name);const newGroups=[...c.groups];newGroups.splice(idx+1,0,{...g,name:nn,locked:g.locked});const newItems=[...c.items,...c.items.filter((i: any)=>i.group===g.name).map((i: any)=>({...i,id:uid(),group:nn}))];return{...c,groups:newGroups,items:newItems};})); }} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={() => deleteCustomGroup(cc.id, g.name)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
                       </div>
                     )}
                     {groupItems.length === 0 && <div style={{fontSize:12,color:"#777",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
@@ -1286,7 +1294,7 @@ export default function App() {
                                   {g.unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{g.unit}</span>}
                                 </div>
                               )}
-                              <button onClick={() => deleteCustomItem(cc.id, item.id)} style={{...delBtn,fontSize:18}}>x</button>
+                              <div style={{display:"flex",gap:2}}><button onClick={() => dupCustomItem(cc.id, item.id)} style={dupBtn}>⧉</button><button onClick={() => deleteCustomItem(cc.id, item.id)} style={{...delBtn,fontSize:18}}>x</button></div>
                             </div>
                           </DraggableRow>
                         ))}
