@@ -152,13 +152,15 @@ function genBreakpointsJSON(bps: any[])     { const t: any={}; bps.forEach(b    
 
 function dlJSON(json: string, filename: string) {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([json],{type:"application/json"}));
-  a.download = filename; a.click();
+  const url = URL.createObjectURL(new Blob([json],{type:"application/json"}));
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
 }
 function dlText(text: string, filename: string) {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([text],{type:"text/plain"}));
-  a.download = filename; a.click();
+  const url = URL.createObjectURL(new Blob([text],{type:"text/plain"}));
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── CSS variables generators ─────────────────────────────────────────────────
@@ -336,9 +338,66 @@ const defaultZIndex      = [{id:1,name:"base",value:"0"},{id:2,name:"raised",val
 const defaultBreakpoints = [{id:1,name:"xs",value:"0",max:"567"},{id:2,name:"sm",value:"567",max:"767"},{id:3,name:"md",value:"767",max:"991"},{id:4,name:"lg",value:"991",max:""}];
 
 let _id = 500;
+function initIdCounter() {
+  try {
+    const raw = localStorage.getItem("figma-variables-generator");
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    const collect = (arr: any[]) => arr?.forEach((i: any) => { if (i?.id > _id) _id = i.id; });
+    collect(s.primGroups); collect(s.colors); collect(s.spacing); collect(s.textStyles);
+    collect(s.radius); collect(s.borders); collect(s.shadows); collect(s.zindex); collect(s.breakpoints);
+    s.typography?.families && collect(s.typography.families);
+    s.typography?.sizes && collect(s.typography.sizes);
+    s.typography?.weights && collect(s.typography.weights);
+    s.typography?.lineHeights && collect(s.typography.lineHeights);
+    s.customCollections?.forEach((cc: any) => { if (cc?.id > _id) _id = cc.id; collect(cc.items); });
+  } catch { /* ignore */ }
+}
+initIdCounter();
 const uid = () => ++_id;
 
 const matchesSearch = (q: string, ...fields: string[]) => { if (!q) return true; const lq = q.toLowerCase(); return fields.some(f => f && f.toLowerCase().includes(lq)); };
+
+const TS_DECORATION_OPTIONS = ["NONE","UNDERLINE","STRIKETHROUGH"];
+const FONT_FAMILIES = [
+  {label:"Inter", value:"Inter, sans-serif"},
+  {label:"Roboto", value:"Roboto, sans-serif"},
+  {label:"Open Sans", value:"Open Sans, sans-serif"},
+  {label:"Lato", value:"Lato, sans-serif"},
+  {label:"Montserrat", value:"Montserrat, sans-serif"},
+  {label:"Poppins", value:"Poppins, sans-serif"},
+  {label:"Nunito", value:"Nunito, sans-serif"},
+  {label:"Raleway", value:"Raleway, sans-serif"},
+  {label:"Work Sans", value:"Work Sans, sans-serif"},
+  {label:"DM Sans", value:"DM Sans, sans-serif"},
+  {label:"Plus Jakarta Sans", value:"Plus Jakarta Sans, sans-serif"},
+  {label:"Source Sans 3", value:"Source Sans 3, sans-serif"},
+  {label:"Manrope", value:"Manrope, sans-serif"},
+  {label:"Outfit", value:"Outfit, sans-serif"},
+  {label:"Space Grotesk", value:"Space Grotesk, sans-serif"},
+  {label:"Arial", value:"Arial, sans-serif"},
+  {label:"Helvetica Neue", value:"Helvetica Neue, sans-serif"},
+  {label:"SF Pro Display", value:"SF Pro Display, sans-serif"},
+  {label:"Playfair Display", value:"Playfair Display, serif"},
+  {label:"Merriweather", value:"Merriweather, serif"},
+  {label:"Lora", value:"Lora, serif"},
+  {label:"PT Serif", value:"PT Serif, serif"},
+  {label:"Libre Baskerville", value:"Libre Baskerville, serif"},
+  {label:"EB Garamond", value:"EB Garamond, serif"},
+  {label:"Crimson Text", value:"Crimson Text, serif"},
+  {label:"Georgia", value:"Georgia, serif"},
+  {label:"Times New Roman", value:"Times New Roman, serif"},
+  {label:"Fira Code", value:"Fira Code, monospace"},
+  {label:"JetBrains Mono", value:"JetBrains Mono, monospace"},
+  {label:"Source Code Pro", value:"Source Code Pro, monospace"},
+  {label:"IBM Plex Mono", value:"IBM Plex Mono, monospace"},
+  {label:"Roboto Mono", value:"Roboto Mono, monospace"},
+  {label:"Courier New", value:"Courier New, monospace"},
+  {label:"Menlo", value:"Menlo, monospace"},
+  {label:"Inconsolata", value:"Inconsolata, monospace"},
+  {label:"system-ui", value:"system-ui, sans-serif"},
+  {label:"cursive", value:"cursive"},
+];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const inp = (extra: any={}) => ({background:"var(--bg-input)",border:"1px solid var(--border-input)",borderRadius:6,padding:"9px 12px",fontSize:13,color:"var(--text-primary)",outline:"none",boxSizing:"border-box" as const,...extra});
@@ -347,6 +406,9 @@ const dupBtn: any = {background:"none",border:"none",color:"var(--text-secondary
 const rowBase: any = {padding:"8px 0",borderBottom:"1px solid var(--border-row)"};
 const colHdr: any = {display:"flex",alignItems:"center",gap:8,padding:"0 0 8px",borderBottom:"1px solid var(--border-section)",marginBottom:4,paddingLeft:10};
 const hdrStyle: any = {fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em",color:"var(--text-secondary)",padding:"10px 0 6px",display:"flex",alignItems:"center",gap:8};
+const tabBtnStyle = {fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--border-input)",background:"var(--bg-input)",color:"var(--text-secondary)",cursor:"pointer"} as const;
+const tabAddBtnStyle = {fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--accent)",background:"var(--bg-accent-subtle)",color:"var(--accent-text)",cursor:"pointer"} as const;
+const tabResetBtnStyle = {fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger-text)",cursor:"pointer"} as const;
 
 // ── Shared components ─────────────────────────────────────────────────────────
 function AddRowBtn({ onClick, label, disabled }: any) {
@@ -370,7 +432,7 @@ function TabHeader({ title, description, actions, search, onSearch }: any) {
 function DragHandle({ onMouseEnter, onMouseLeave }: any) {
   return <div title="Drag to reorder" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>&#8959;</div>;
 }
-function useDraggable(list: any[], setList: any) {
+function useDraggable(setList: any) {
   const dragId = useRef<any>(null), overId = useRef<any>(null);
   const onDragStart = useCallback((id: any) => { dragId.current = id; }, []);
   const onDragOver  = useCallback((e: any, id: any) => { e.preventDefault(); overId.current = id; }, []);
@@ -619,6 +681,7 @@ export default function App() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
   const fileRef = useRef<any>();
+  const ccDragRef = useRef<Record<number, { dragId: number|null, overId: number|null }>>({});
 
   const toggleSelect = useCallback((id: number) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }), []);
   const toggleSelectAll = useCallback((ids: number[]) => setSelected(prev => {
@@ -708,21 +771,6 @@ export default function App() {
   };
   const updateCustomCollection = (id: number, field: string, val: any) =>
     setCustomCollections(cc => cc.map(c => c.id === id ? { ...c, [field]: val } : c));
-  const renameCustomCollection = (id: number, newName: string) => {
-    const trimmed = newName.trim();
-    if (!trimmed || allTabs.includes(trimmed)) return;
-    setCustomCollections(cc => cc.map(c => {
-      if (c.id !== id) return c;
-      return { ...c, name: trimmed };
-    }));
-    setEnabledTabs(prev => {
-      const old = customCollections.find(c => c.id === id)?.name;
-      const next = new Set(prev);
-      if (old && next.has(old)) { next.delete(old); next.add(trimmed); }
-      return next;
-    });
-    if (tab === customCollections.find(c => c.id === id)?.name) setTab(trimmed);
-  };
   const deleteCustomCollection = (id: number) => {
     const c = customCollections.find(x => x.id === id);
     if (!c) return;
@@ -765,18 +813,18 @@ export default function App() {
     return next;
   });
 
-  const colorDrag      = useDraggable(colors,      setColors);
-  const spacingDrag    = useDraggable(spacing,      setSpacing);
-  const textStylesDrag = useDraggable(textStyles,   setTextStyles);
-  const radiusDrag     = useDraggable(radius,       setRadius);
-  const borderDrag     = useDraggable(borders,      setBorders);
-  const shadowDrag     = useDraggable(shadows,      setShadows);
-  const zDrag          = useDraggable(zindex,       setZIndex);
-  const breakpointDrag = useDraggable(breakpoints,  setBreakpoints);
-  const typFamDrag     = useDraggable(typography.families,    (l: any) => setTypography((t: any) => ({...t,families:l})));
-  const typSizeDrag    = useDraggable(typography.sizes,       (l: any) => setTypography((t: any) => ({...t,sizes:l})));
-  const typWgtDrag     = useDraggable(typography.weights,     (l: any) => setTypography((t: any) => ({...t,weights:l})));
-  const typLhDrag      = useDraggable(typography.lineHeights, (l: any) => setTypography((t: any) => ({...t,lineHeights:l})));
+  const colorDrag      = useDraggable(setColors);
+  const spacingDrag    = useDraggable(setSpacing);
+  const textStylesDrag = useDraggable(setTextStyles);
+  const radiusDrag     = useDraggable(setRadius);
+  const borderDrag     = useDraggable(setBorders);
+  const shadowDrag     = useDraggable(setShadows);
+  const zDrag          = useDraggable(setZIndex);
+  const breakpointDrag = useDraggable(setBreakpoints);
+  const typFamDrag     = useDraggable((l: any) => setTypography((t: any) => ({...t,families:l})));
+  const typSizeDrag    = useDraggable((l: any) => setTypography((t: any) => ({...t,sizes:l})));
+  const typWgtDrag     = useDraggable((l: any) => setTypography((t: any) => ({...t,weights:l})));
+  const typLhDrag      = useDraggable((l: any) => setTypography((t: any) => ({...t,lineHeights:l})));
   const typoDragMap: any = { families:typFamDrag, sizes:typSizeDrag, weights:typWgtDrag, lineHeights:typLhDrag };
   const primGroupDrag   = useGroupDrag(setPrimGroups, "id");
   const colorGroupDrag  = useGroupDrag(setColorGroups, "string");
@@ -924,7 +972,6 @@ export default function App() {
   const bpRange = (b: any) => (b.value?">= "+b.value+"px":"0")+(b.max?" and < "+b.max+"px":"");
   const groupedTextStyles = tsGroups.reduce((a: any, g: string) => { a[g]=textStyles.filter(s=>s.group===g); return a; }, {});
 
-  const TS_DECORATION_OPTIONS = ["NONE","UNDERLINE","STRIKETHROUGH"];
 
   // ── Bulk actions ─────────────────────────────────────────────────────────────
   const bulkDelete = () => {
@@ -953,45 +1000,6 @@ export default function App() {
     else { const cc=customCollections.find(c=>c.name===tab); if(cc) setCustomCollections(ccs=>ccs.map(c=>c.id===cc.id?{...c,items:c.items.map((i: any)=>ids.has(i.id)?{...i,[field]:value}:i)}:c)); }
   };
 
-  const FONT_FAMILIES = [
-    {label:"Inter", value:"Inter, sans-serif"},
-    {label:"Roboto", value:"Roboto, sans-serif"},
-    {label:"Open Sans", value:"Open Sans, sans-serif"},
-    {label:"Lato", value:"Lato, sans-serif"},
-    {label:"Montserrat", value:"Montserrat, sans-serif"},
-    {label:"Poppins", value:"Poppins, sans-serif"},
-    {label:"Nunito", value:"Nunito, sans-serif"},
-    {label:"Raleway", value:"Raleway, sans-serif"},
-    {label:"Work Sans", value:"Work Sans, sans-serif"},
-    {label:"DM Sans", value:"DM Sans, sans-serif"},
-    {label:"Plus Jakarta Sans", value:"Plus Jakarta Sans, sans-serif"},
-    {label:"Source Sans 3", value:"Source Sans 3, sans-serif"},
-    {label:"Manrope", value:"Manrope, sans-serif"},
-    {label:"Outfit", value:"Outfit, sans-serif"},
-    {label:"Space Grotesk", value:"Space Grotesk, sans-serif"},
-    {label:"Arial", value:"Arial, sans-serif"},
-    {label:"Helvetica Neue", value:"Helvetica Neue, sans-serif"},
-    {label:"SF Pro Display", value:"SF Pro Display, sans-serif"},
-    {label:"Playfair Display", value:"Playfair Display, serif"},
-    {label:"Merriweather", value:"Merriweather, serif"},
-    {label:"Lora", value:"Lora, serif"},
-    {label:"PT Serif", value:"PT Serif, serif"},
-    {label:"Libre Baskerville", value:"Libre Baskerville, serif"},
-    {label:"EB Garamond", value:"EB Garamond, serif"},
-    {label:"Crimson Text", value:"Crimson Text, serif"},
-    {label:"Georgia", value:"Georgia, serif"},
-    {label:"Times New Roman", value:"Times New Roman, serif"},
-    {label:"Fira Code", value:"Fira Code, monospace"},
-    {label:"JetBrains Mono", value:"JetBrains Mono, monospace"},
-    {label:"Source Code Pro", value:"Source Code Pro, monospace"},
-    {label:"IBM Plex Mono", value:"IBM Plex Mono, monospace"},
-    {label:"Roboto Mono", value:"Roboto Mono, monospace"},
-    {label:"Courier New", value:"Courier New, monospace"},
-    {label:"Menlo", value:"Menlo, monospace"},
-    {label:"Inconsolata", value:"Inconsolata, monospace"},
-    {label:"system-ui", value:"system-ui, sans-serif"},
-    {label:"cursive", value:"cursive"},
-  ];
 
   const [tabResetConfirm, setTabResetConfirm] = useState(false);
   const resetTab = () => {
@@ -1017,9 +1025,6 @@ export default function App() {
     setTabResetConfirm(false);
   };
 
-  const tabBtnStyle = {fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--border-input)",background:"var(--bg-input)",color:"var(--text-secondary)",cursor:"pointer"} as const;
-  const tabAddBtnStyle = {fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--accent)",background:"var(--bg-accent-subtle)",color:"var(--accent-text)",cursor:"pointer"} as const;
-  const tabResetBtnStyle = {fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger-text)",cursor:"pointer"} as const;
   const tabActionBtns = <>{importError && <span style={{fontSize:12,color:"var(--danger-text)"}}>{importError}</span>}
     <button onClick={()=>fileRef.current.click()} style={tabBtnStyle}>Import JSON</button>
     <button onClick={()=>setShowPreview(v=>!v)} style={tabBtnStyle}>{showPreview?"Hide Preview":"Preview JSON"}</button>
@@ -1268,14 +1273,14 @@ export default function App() {
                   <div style={colHdr}>
                     {selectAllChk(filteredTs.map((s: any)=>s.id))}
                     <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                    <div style={{flex:1,display:"grid",gridTemplateColumns:"90px minmax(120px,1fr) 50px 54px 54px 54px 54px 90px minmax(60px,1fr) 32px",gap:6}}>
-                    {["Name","Font Family","Size","Weight","L.Hgt","L.Spc","P.Spc","Decor.","Preview",""].map((h,i)=><div key={i} style={{fontSize:10,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                    <div style={{flex:1,display:"grid",gridTemplateColumns:"80px minmax(70px,130px) 55px 56px 100px 110px 140px 100px 1fr 32px",gap:6}}>
+                    {["Name","Font Family","Size (px)","Weight","Line Height (em)","Letter Spacing (%)","Paragraph Spacing (px)","Decoration","Preview",""].map((h,i)=><div key={i} style={{fontSize:10,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",whiteSpace:"nowrap"}}>{h}</div>)}
                     </div>
                   </div>
 
                   {filteredTs.map((s: any) => (
                     <DraggableRow key={s.id} id={s.id} dragHandlers={textStylesDrag} checked={selected.has(s.id)} onCheck={toggleSelect}>
-                      <div style={{display:"grid",gridTemplateColumns:"90px minmax(120px,1fr) 50px 54px 54px 54px 54px 90px minmax(60px,1fr) 32px",gap:6,alignItems:"center"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"80px minmax(70px,130px) 55px 56px 100px 110px 140px 100px 1fr 32px",gap:6,alignItems:"center"}}>
 
                         {/* Name */}
                         <input value={s.name} onChange={e=>updateTextStyle(s.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
@@ -1437,26 +1442,26 @@ export default function App() {
                 {["Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                 </div>
               </div>
-              {breakpoints.filter((b: any) => matchesSearch(search, b.name, b.value, b.max)).map((b: any, idx: number) => (
+              {breakpoints.filter((b: any) => matchesSearch(search, b.name, b.value, b.max)).map((b: any) => (
                 <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
                   <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"var(--text-secondary)"}}>breakpoint /</span>
                     <input value={b.name} onChange={e=>updateList(setBreakpoints,b.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
                     <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.value} onChange={e=>{
                       const v = e.target.value;
-                      setBreakpoints(list => list.map((bp: any, i: number) => {
-                        if (bp.id === b.id) return { ...bp, value: v };
-                        if (i === idx - 1) return { ...bp, max: v };
+                      setBreakpoints(list => { const ri = list.findIndex((bp: any) => bp.id === b.id); return list.map((bp: any, i: number) => {
+                        if (i === ri) return { ...bp, value: v };
+                        if (i === ri - 1) return { ...bp, max: v };
                         return bp;
-                      }));
+                      }); });
                     }} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"var(--text-secondary)",flexShrink:0}}>px</span></div>
                     <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.max} onChange={e=>{
                       const v = e.target.value;
-                      setBreakpoints(list => list.map((bp: any, i: number) => {
-                        if (bp.id === b.id) return { ...bp, max: v };
-                        if (i === idx + 1) return { ...bp, value: v };
+                      setBreakpoints(list => { const ri = list.findIndex((bp: any) => bp.id === b.id); return list.map((bp: any, i: number) => {
+                        if (i === ri) return { ...bp, max: v };
+                        if (i === ri + 1) return { ...bp, value: v };
                         return bp;
-                      }));
+                      }); });
                     }} placeholder="none" style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"var(--text-secondary)",flexShrink:0}}>px</span></div>
                     <div style={{fontSize:12,color:"var(--text-secondary)",fontFamily:"monospace"}}>{bpRange(b)}</div>
                     <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setBreakpoints,b.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setBreakpoints,b.id)} style={{...delBtn,fontSize:18}}>x</button></div>
@@ -1570,10 +1575,11 @@ export default function App() {
                         </div>
                         {groupItems.map((item: any) => (
                           <DraggableRow key={item.id} id={item.id} checked={selected.has(item.id)} onCheck={toggleSelect} dragHandlers={{
-                            onDragStart: (id: number) => { (cc as any)._dragId = id; },
-                            onDragOver: (e: any, id: number) => { e.preventDefault(); (cc as any)._overId = id; },
+                            onDragStart: (id: number) => { if (!ccDragRef.current[cc.id]) ccDragRef.current[cc.id] = { dragId: null, overId: null }; ccDragRef.current[cc.id].dragId = id; },
+                            onDragOver: (e: any, id: number) => { e.preventDefault(); if (!ccDragRef.current[cc.id]) ccDragRef.current[cc.id] = { dragId: null, overId: null }; ccDragRef.current[cc.id].overId = id; },
                             onDrop: () => {
-                              const from = (cc as any)._dragId, to = (cc as any)._overId;
+                              const d = ccDragRef.current[cc.id]; if (!d) return;
+                              const from = d.dragId, to = d.overId;
                               if (from == null || to == null || from === to) return;
                               setCustomCollections(ccs => ccs.map(c => {
                                 if (c.id !== cc.id) return c;
@@ -1586,7 +1592,7 @@ export default function App() {
                                 return { ...c, items };
                               }));
                             },
-                            onDragEnd: () => { (cc as any)._dragId = null; (cc as any)._overId = null; },
+                            onDragEnd: () => { if (ccDragRef.current[cc.id]) ccDragRef.current[cc.id] = { dragId: null, overId: null }; },
                           }}>
                             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 32px",gap:10,alignItems:"center"}}>
                               <input value={item.name} onChange={e => updateCustomItem(cc.id, item.id, "name", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box" })} />
