@@ -370,30 +370,43 @@ function DownloadPanel({ enabled, primGroups, primitives, colors, spacing, typog
   );
 }
 
+// ── localStorage persistence ─────────────────────────────────────────────────
+const STORAGE_KEY = "figma-variables-generator";
+function loadSaved() {
+  try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab]                   = useState("Primitives");
-  const [enabledTabs, setEnabledTabs]   = useState(DEFAULT_ENABLED);
-  const [primGroups,  setPrimGroups]    = useState(buildDefaultPrimGroups);
-  const [primitives,  setPrimitives]    = useState(buildDefaultPrimitives);
-  const [colorGroups, setColorGroups]   = useState(DEFAULT_COLOR_GROUPS);
-  const [colors,      setColors]        = useState(defaultColors);
-  const [spacing,     setSpacing]       = useState(defaultSpacing);
-  const [typography,  setTypography]    = useState(defaultTypography);
-  const [textStyles,  setTextStyles]    = useState(defaultTextStyles);
-  const [tsGroups,    setTsGroups]      = useState(DEFAULT_TS_GROUPS);
-  const [radius,      setRadius]        = useState(defaultRadius);
-  const [borders,     setBorders]       = useState(defaultBorders);
-  const [shadows,     setShadows]       = useState(defaultShadows);
-  const [zindex,      setZIndex]        = useState(defaultZIndex);
-  const [breakpoints, setBreakpoints]   = useState(defaultBreakpoints);
-  const [customCollections, setCustomCollections] = useState<any[]>([]);
+  const saved = useRef(loadSaved()).current;
+  const [tab, setTab]                   = useState(saved?.tab || "Primitives");
+  const [enabledTabs, setEnabledTabs]   = useState(() => saved?.enabledTabs ? new Set<string>(saved.enabledTabs) : DEFAULT_ENABLED);
+  const [primGroups,  setPrimGroups]    = useState(() => saved?.primGroups || buildDefaultPrimGroups());
+  const [primitives,  setPrimitives]    = useState(() => saved?.primitives || buildDefaultPrimitives());
+  const [colorGroups, setColorGroups]   = useState(saved?.colorGroups || DEFAULT_COLOR_GROUPS);
+  const [colors,      setColors]        = useState(saved?.colors || defaultColors);
+  const [spacing,     setSpacing]       = useState(saved?.spacing || defaultSpacing);
+  const [typography,  setTypography]    = useState(saved?.typography || defaultTypography);
+  const [textStyles,  setTextStyles]    = useState(saved?.textStyles || defaultTextStyles);
+  const [tsGroups,    setTsGroups]      = useState(saved?.tsGroups || DEFAULT_TS_GROUPS);
+  const [radius,      setRadius]        = useState(saved?.radius || defaultRadius);
+  const [borders,     setBorders]       = useState(saved?.borders || defaultBorders);
+  const [shadows,     setShadows]       = useState(saved?.shadows || defaultShadows);
+  const [zindex,      setZIndex]        = useState(saved?.zindex || defaultZIndex);
+  const [breakpoints, setBreakpoints]   = useState(saved?.breakpoints || defaultBreakpoints);
+  const [customCollections, setCustomCollections] = useState<any[]>(saved?.customCollections || []);
   const [showPreview,      setShowPreview]      = useState(false);
   const [showDl,           setShowDl]           = useState(false);
   const [copied,           setCopied]           = useState(false);
   const [importError,      setImportError]      = useState("");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const fileRef = useRef<any>();
+
+  // Auto-save to localStorage
+  useEffect(() => {
+    const data = { tab, enabledTabs: [...enabledTabs], primGroups, primitives, colorGroups, colors, spacing, typography, textStyles, tsGroups, radius, borders, shadows, zindex, breakpoints, customCollections };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* quota exceeded — ignore */ }
+  }, [tab, enabledTabs, primGroups, primitives, colorGroups, colors, spacing, typography, textStyles, tsGroups, radius, borders, shadows, zindex, breakpoints, customCollections]);
 
   const allTabs = [...ALL_TABS, ...customCollections.map((c: any) => c.name)];
 
@@ -496,6 +509,7 @@ export default function App() {
     setZIndex(defaultZIndex); setBreakpoints(defaultBreakpoints);
     setCustomCollections([]); setEnabledTabs(new Set(ALL_TABS)); setTab("Primitives");
     setShowResetConfirm(false); setImportError("");
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
   };
 
   const handleImport = (e: any) => {
@@ -649,7 +663,12 @@ export default function App() {
     else if (tab==="Breakpoints") { setBreakpoints(defaultBreakpoints); }
     else {
       const cc = customCollections.find(c => c.name === tab);
-      if (cc) setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, items: [] } : c));
+      if (cc) {
+        const newName = "Custom " + cc.id;
+        setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, name: newName, jsonKey: "custom-" + cc.id, type: "number", unit: "", items: [], locked: false } : c));
+        setEnabledTabs(prev => { const next = new Set(prev); next.delete(cc.name); next.add(newName); return next; });
+        setTab(newName);
+      }
     }
     setTabResetConfirm(false);
   };
