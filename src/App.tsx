@@ -132,12 +132,17 @@ function genSpacingJSON(spacing: any[])     { const t: any={}; spacing.forEach(s
 function genTypographyJSON(typography: any) { const t: any={family:{},size:{},weight:{},"line-height":{}}; typography.families.forEach((f: any)    => { t.family[f.name]         = { "$type":"fontFamily", "$value":f.value }; }); typography.sizes.forEach((s: any)       => { t.size[s.name]           = { "$type":"dimension",  "$value":{ value:parseFloat(s.value)||0, unit:"px" } }; }); typography.weights.forEach((w: any)     => { t.weight[w.name]         = { "$type":"number",     "$value":parseFloat(w.value)||0 }; }); typography.lineHeights.forEach((l: any) => { t["line-height"][l.name] = { "$type":"number",     "$value":parseFloat(l.value)||0 }; }); return JSON.stringify(t,null,2); }
 function genRadiusJSON(radius: any[])       { const t: any={}; radius.forEach(r       => { t[r.name]       = { "$type":"dimension", "$value":{ value:parseFloat(r.value)||0, unit:"px" } }; }); return JSON.stringify(t,null,2); }
 function genBorderJSON(borders: any[])      { const t: any={}; borders.forEach(b      => { t[b.name]       = { "$type":"dimension", "$value":{ value:parseFloat(b.value)||0, unit:"px" } }; }); return JSON.stringify(t,null,2); }
-function genCustomJSON(items: any[], type: string, unit: string) {
+function genCustomJSON(items: any[], groups: any[]) {
   const t: any={};
-  const isNum = type==="number"||type==="dimension"||type==="duration";
+  const flat = groups.length <= 1;
+  const groupMap: Record<string,any> = {};
+  (groups || []).forEach((g: any) => { groupMap[g.name] = g; if (!flat) t[g.name] = {}; });
   items.forEach(i => {
+    const g = groupMap[i.group] || groups[0] || { type: "number", unit: "" };
+    const isNum = g.type==="number"||g.type==="dimension"||g.type==="duration";
     const val = isNum ? (parseFloat(i.value)||0) : i.value;
-    t[i.name] = { "$type":type, "$value": unit ? { value:val, unit } : val };
+    const entry = { "$type":g.type, "$value": g.unit ? { value:val, unit:g.unit } : val };
+    if (flat) { t[i.name] = entry; } else { if (!t[i.group]) t[i.group] = {}; t[i.group][i.name] = entry; }
   });
   return JSON.stringify(t,null,2);
 }
@@ -202,8 +207,8 @@ const rowBase: any = {padding:"8px 0",borderBottom:"1px solid #14141e"};
 const hdrStyle: any = {fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em",color:"#777",padding:"10px 0 6px",display:"flex",alignItems:"center",gap:8};
 
 // ── Shared components ─────────────────────────────────────────────────────────
-function AddRowBtn({ onClick, label }: any) {
-  return <button onClick={onClick} style={{fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px dashed #4f46e5",background:"#1a1a3e",color:"#a5b4fc",cursor:"pointer",marginTop:6,width:"100%",textAlign:"left"}}>{label}</button>;
+function AddRowBtn({ onClick, label, disabled }: any) {
+  return <button onClick={disabled ? undefined : onClick} disabled={disabled} style={{fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px dashed #4f46e5",background:"#1a1a3e",color:"#a5b4fc",cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,marginTop:6,width:"100%",textAlign:"left"}}>{label}</button>;
 }
 function TabHeader({ title, description, actions }: any) {
   return (
@@ -332,7 +337,7 @@ function DownloadPanel({ enabled, primGroups, primitives, colors, spacing, typog
     { tab:"Shadows",      label:"shadows.json",        name:"shadows.json",        json:() => genShadowsJSON(shadows)                      },
     { tab:"Z-Index",      label:"z-index.json",        name:"z-index.json",        json:() => genZIndexJSON(zindex)                        },
     { tab:"Breakpoints",  label:"breakpoints.json",    name:"breakpoints.json",    json:() => genBreakpointsJSON(breakpoints)              },
-    ...(customCollections||[]).map((c: any) => ({ tab:c.name, label:c.jsonKey+".json", name:c.jsonKey+".json", json:()=>genCustomJSON(c.items,c.type,c.unit) })),
+    ...(customCollections||[]).map((c: any) => ({ tab:c.name, label:c.jsonKey+".json", name:c.jsonKey+".json", json:()=>genCustomJSON(c.items,c.groups) })),
   ].filter(f => enabled.has(f.tab));
 
   const [checked, setChecked] = useState(() => new Set(allFiles.map(f => f.name)));
@@ -470,7 +475,7 @@ export default function App() {
   const addCustomCollection = () => {
     const id = uid();
     const name = "Custom " + id;
-    setCustomCollections(cc => [...cc, { id, name, jsonKey: "custom-" + id, type: "number", unit: "", items: [], locked: false }]);
+    setCustomCollections(cc => [...cc, { id, name, jsonKey: "custom-" + id, items: [], groups: [{ name: "default", type: "number", unit: "", locked: false }], locked: false }]);
     setEnabledTabs(prev => { const next = new Set(prev); next.add(name); return next; });
     setTab(name);
   };
@@ -502,8 +507,27 @@ export default function App() {
     setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: c.items.map((i: any) => i.id === itemId ? { ...i, [field]: val } : i) } : c));
   const deleteCustomItem = (collId: number, itemId: number) =>
     setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: c.items.filter((i: any) => i.id !== itemId) } : c));
-  const addCustomItem = (collId: number) =>
-    setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: [...c.items, { id: uid(), name: "new", value: c.type === "color" ? "{primitives.blue.600}" : c.type === "fontFamily" ? "Inter, sans-serif" : "0" }] } : c));
+  const addCustomItem = (collId: number, group: string) =>
+    setCustomCollections(cc => cc.map(c => {
+      if (c.id !== collId) return c;
+      const g = c.groups.find((gr: any) => gr.name === group) || c.groups[0];
+      const defVal = g.type === "color" ? "{primitives.blue.600}" : g.type === "fontFamily" ? "Inter, sans-serif" : "0";
+      return { ...c, items: [...c.items, { id: uid(), name: "new", group, value: defVal }] };
+    }));
+  const addCustomGroup = (collId: number) =>
+    setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, groups: [...(c.groups || []), { name: "group-" + uid(), type: "number", unit: "", locked: false }] } : c));
+  const renameCustomGroup = (collId: number, oldName: string, newName: string) => {
+    const t = newName.trim(); if (!t) return;
+    setCustomCollections(cc => cc.map(c => {
+      if (c.id !== collId) return c;
+      if (c.groups.some((g: any) => g.name === t) && t !== oldName) return c;
+      return { ...c, groups: c.groups.map((g: any) => g.name === oldName ? { ...g, name: t } : g), items: c.items.map((i: any) => i.group === oldName ? { ...i, group: t } : i) };
+    }));
+  };
+  const updateCustomGroup = (collId: number, groupName: string, field: string, val: string) =>
+    setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, groups: c.groups.map((g: any) => g.name === groupName ? { ...g, [field]: val } : g) } : c));
+  const deleteCustomGroup = (collId: number, groupName: string) =>
+    setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, groups: c.groups.filter((g: any) => g.name !== groupName), items: c.items.filter((i: any) => i.group !== groupName) } : c));
 
   const toggleTab = (t: string) => setEnabledTabs(prev => {
     const next = new Set(prev);
@@ -551,7 +575,7 @@ export default function App() {
     if (tab==="Z-Index")      return genZIndexJSON(zindex);
     if (tab==="Breakpoints")  return genBreakpointsJSON(breakpoints);
     const cc = customCollections.find(c => c.name === tab);
-    if (cc) return genCustomJSON(cc.items, cc.type, cc.unit);
+    if (cc) return genCustomJSON(cc.items, cc.groups);
     return "";
   };
 
@@ -722,7 +746,7 @@ export default function App() {
       const cc = customCollections.find(c => c.name === tab);
       if (cc) {
         const newName = "Custom " + cc.id;
-        setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, name: newName, jsonKey: "custom-" + cc.id, type: "number", unit: "", items: [], locked: false } : c));
+        setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, name: newName, jsonKey: "custom-" + cc.id, items: [], groups: [{ name: "default", type: "number", unit: "", locked: false }], locked: false } : c));
         setEnabledTabs(prev => { const next = new Set(prev); next.delete(cc.name); next.add(newName); return next; });
         setTab(newName);
       }
@@ -789,7 +813,16 @@ export default function App() {
             const enabled=enabledTabs.has(t), active=tab===t;
             return (
               <div key={t} style={{display:"flex",alignItems:"center"}}>
-                <button onClick={()=>{setTab(t);setTabResetConfirm(false);}} style={{flex:1,textAlign:"left",padding:"10px 14px",fontSize:13,fontWeight:active?600:400,cursor:"pointer",border:"none",background:active?"#4f46e5":"transparent",color:active?"#fff":enabled?"#777":"#444",transition:"all 0.15s"}}>{t}</button>
+                <button onClick={()=>{
+                  // Auto-save unsaved custom collection/group settings when switching away
+                  const curr = customCollections.find(c => c.name === tab);
+                  if (curr) {
+                    if (!curr.locked) updateCustomCollection(curr.id, "locked", true);
+                    const unlocked = curr.groups?.some((gr: any) => gr.locked === false);
+                    if (unlocked) setCustomCollections(ccs => ccs.map(c => c.id !== curr.id ? c : { ...c, groups: c.groups.map((gr: any) => ({ ...gr, locked: true })) }));
+                  }
+                  setTab(t);setTabResetConfirm(false);
+                }} style={{flex:1,textAlign:"left",padding:"10px 14px",fontSize:13,fontWeight:active?600:400,cursor:"pointer",border:"none",background:active?"#4f46e5":"transparent",color:active?"#fff":enabled?"#777":"#444",transition:"all 0.15s"}}>{t}</button>
                 <div onClick={()=>toggleTab(t)} title={enabled?"Exclude from export":"Include in export"} style={{width:36,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,paddingRight:10,paddingLeft:4,alignSelf:"stretch"}}>
                   <div style={{width:24,height:14,borderRadius:9999,background:enabled?"#4f46e5":"#2a2a3a",border:"1px solid "+(enabled?"#4f46e5":"#444"),position:"relative"}}>
                     <div style={{position:"absolute",top:2,left:enabled?10:2,width:9,height:9,borderRadius:"50%",background:enabled?"#fff":"#555",transition:"left 0.2s"}} />
@@ -1128,7 +1161,7 @@ export default function App() {
           {customCollections.map((cc: any) => tab === cc.name && (
             <div key={cc.id}>
               <TabHeader title={cc.name} description={`Custom collection — exports as ${cc.jsonKey}.json`}
-                actions={tabActions(<button onClick={() => addCustomItem(cc.id)} style={tabAddBtnStyle}>+ Add Token</button>)} />
+                actions={tabActions(<button onClick={() => addCustomGroup(cc.id)} disabled={!cc.locked} style={{...tabAddBtnStyle, opacity: cc.locked ? 1 : 0.4, cursor: cc.locked ? "pointer" : "default"}}>+ Add Group</button>)} />
 
               {/* Collection settings */}
               <div style={{display:"flex",gap:12,marginBottom:20,padding:12,background:"#111118",borderRadius:8,border:"1px solid #1e1e30",flexWrap:"wrap",alignItems:"center"}}>
@@ -1146,38 +1179,6 @@ export default function App() {
                   JSON Key
                   <input value={cc.jsonKey} disabled={cc.locked} onChange={e => updateCustomCollection(cc.id, "jsonKey", e.target.value)} style={inp({ width: 120, fontFamily: "monospace", opacity: cc.locked ? 0.5 : 1 })} />
                 </label>
-                <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"#777"}}>
-                  Value Type
-                  <select value={cc.type + (cc.unit ? "|" + cc.unit : "")} disabled={cc.locked} onChange={e => {
-                    const [type, unit = ""] = e.target.value.split("|");
-                    updateCustomCollection(cc.id, "type", type);
-                    updateCustomCollection(cc.id, "unit", unit);
-                  }} style={inp({ width: 160, fontSize: 11, padding: "8px 6px", opacity: cc.locked ? 0.5 : 1 })}>
-                    <optgroup label="Unitless">
-                      <option value="number">Number</option>
-                      <option value="string">String</option>
-                      <option value="color">Color</option>
-                      <option value="fontFamily">Font Family</option>
-                      <option value="fontWeight">Font Weight</option>
-                    </optgroup>
-                    <optgroup label="Dimension (length)">
-                      <option value="dimension|px">Dimension — px</option>
-                      <option value="dimension|rem">Dimension — rem</option>
-                      <option value="dimension|em">Dimension — em</option>
-                      <option value="dimension|%">Dimension — %</option>
-                      <option value="dimension|vw">Dimension — vw</option>
-                      <option value="dimension|vh">Dimension — vh</option>
-                    </optgroup>
-                    <optgroup label="Duration">
-                      <option value="duration|ms">Duration — ms</option>
-                      <option value="duration|s">Duration — s</option>
-                    </optgroup>
-                    <optgroup label="Other">
-                      <option value="number|deg">Number — deg</option>
-                      <option value="cubicBezier">Cubic Bezier</option>
-                    </optgroup>
-                  </select>
-                </label>
                 <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
                   {cc.locked ? (
                     cc.items.length === 0 && <button onClick={() => updateCustomCollection(cc.id, "locked", false)} style={tabBtnStyle}>Edit</button>
@@ -1188,52 +1189,113 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Column headers */}
-              <div style={{display:"grid",gridTemplateColumns:"28px 100px 1fr 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                {["","Prefix","Name","Value",""].map((h,i) => <div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
-              </div>
-
-              {cc.items.map((item: any) => (
-                <DraggableRow key={item.id} id={item.id} dragHandlers={{
-                  onDragStart: (id: number) => { (cc as any)._dragId = id; },
-                  onDragOver: (e: any, id: number) => { e.preventDefault(); (cc as any)._overId = id; },
-                  onDrop: () => {
-                    const from = (cc as any)._dragId, to = (cc as any)._overId;
-                    if (from == null || to == null || from === to) return;
-                    setCustomCollections(ccs => ccs.map(c => {
-                      if (c.id !== cc.id) return c;
-                      const items = [...c.items];
-                      const fi = items.findIndex((i: any) => i.id === from);
-                      const ti = items.findIndex((i: any) => i.id === to);
-                      if (fi < 0 || ti < 0) return c;
-                      const [moved] = items.splice(fi, 1);
-                      items.splice(ti, 0, moved);
-                      return { ...c, items };
-                    }));
-                  },
-                  onDragEnd: () => { (cc as any)._dragId = null; (cc as any)._overId = null; },
-                }}>
-                  <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 32px",gap:10,alignItems:"center"}}>
-                    <span style={{fontSize:12,color:"#777"}}>{cc.jsonKey} /</span>
-                    <input value={item.name} onChange={e => updateCustomItem(cc.id, item.id, "name", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box" })} />
-                    {cc.type === "color" ? (
-                      <PrimSelector value={item.value} primitives={primitives} primGroups={primGroups} onChange={(v: string) => updateCustomItem(cc.id, item.id, "value", v)} mode="Value" />
-                    ) : cc.type === "fontFamily" ? (
-                      <select value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", fontSize: 11, padding: "8px 6px", fontFamily: item.value })}>
-                        {FONT_FAMILIES.map(f => <option key={f.value} value={f.value} style={{fontFamily: f.value}}>{f.label}</option>)}
-                        {!FONT_FAMILIES.some(f => f.value === item.value) && <option value={item.value}>{item.value}</option>}
-                      </select>
+              {(cc.groups || []).map((g: any) => {
+                const groupItems = cc.items.filter((i: any) => i.group === g.name);
+                const singleGroup = cc.groups.length <= 1;
+                const gLocked = g.locked !== false;
+                const valueTypeSelect = <select value={g.type + (g.unit ? "|" + g.unit : "")} disabled={gLocked} onChange={e => {
+                  const [type, unit = ""] = e.target.value.split("|");
+                  updateCustomGroup(cc.id, g.name, "type", type);
+                  updateCustomGroup(cc.id, g.name, "unit", unit);
+                }} style={inp({ width: 150, fontSize: 10, padding: "4px 6px", opacity: gLocked ? 0.5 : 1 })}>
+                  <optgroup label="Unitless">
+                    <option value="number">Number</option>
+                    <option value="string">String</option>
+                    <option value="color">Color</option>
+                    <option value="fontFamily">Font Family</option>
+                    <option value="fontWeight">Font Weight</option>
+                  </optgroup>
+                  <optgroup label="Dimension (length)">
+                    <option value="dimension|px">Dimension — px</option>
+                    <option value="dimension|rem">Dimension — rem</option>
+                    <option value="dimension|em">Dimension — em</option>
+                    <option value="dimension|%">Dimension — %</option>
+                    <option value="dimension|vw">Dimension — vw</option>
+                    <option value="dimension|vh">Dimension — vh</option>
+                  </optgroup>
+                  <optgroup label="Duration">
+                    <option value="duration|ms">Duration — ms</option>
+                    <option value="duration|s">Duration — s</option>
+                  </optgroup>
+                  <optgroup label="Other">
+                    <option value="number|deg">Number — deg</option>
+                    <option value="cubicBezier">Cubic Bezier</option>
+                  </optgroup>
+                </select>;
+                const groupSaveEdit = gLocked ? (
+                  groupItems.length === 0 && <button onClick={() => updateCustomGroup(cc.id, g.name, "locked", false)} style={{...tabBtnStyle,fontSize:10,padding:"4px 8px"}}>Edit</button>
+                ) : (
+                  <button onClick={() => updateCustomGroup(cc.id, g.name, "locked", true)} style={{...tabAddBtnStyle,fontSize:10,padding:"4px 8px"}}>Save</button>
+                );
+                return (
+                  <div key={g.name} style={{marginBottom:28}}>
+                    {singleGroup ? (
+                      <div style={{...hdrStyle,justifyContent:"space-between"}}>
+                        <span style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Value Type</span>
+                        {valueTypeSelect}
+                        {groupSaveEdit}
+                        <div style={{flex:1}} />
+                      </div>
                     ) : (
-                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                        <input value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box", fontFamily: "monospace" })} />
-                        {cc.unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{cc.unit}</span>}
+                      <div style={hdrStyle}>
+                        <InlineLabel value={g.name} prefix={cc.jsonKey + " / "} onCommit={(n: string) => renameCustomGroup(cc.id, g.name, n)} />
+                        {valueTypeSelect}
+                        {groupSaveEdit}
+                        <div style={{flex:1,height:1,background:"#1e1e30"}} />
+                        <button onClick={() => deleteCustomGroup(cc.id, g.name)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
                       </div>
                     )}
-                    <button onClick={() => deleteCustomItem(cc.id, item.id)} style={{...delBtn,fontSize:18}}>x</button>
+                    {groupItems.length === 0 && <div style={{fontSize:12,color:"#777",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
+                    {groupItems.length > 0 && (
+                      <div>
+                        <div style={{display:"grid",gridTemplateColumns:"28px 1fr 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
+                          {["","Name","Value",""].map((h,i) => <div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                        </div>
+                        {groupItems.map((item: any) => (
+                          <DraggableRow key={item.id} id={item.id} dragHandlers={{
+                            onDragStart: (id: number) => { (cc as any)._dragId = id; },
+                            onDragOver: (e: any, id: number) => { e.preventDefault(); (cc as any)._overId = id; },
+                            onDrop: () => {
+                              const from = (cc as any)._dragId, to = (cc as any)._overId;
+                              if (from == null || to == null || from === to) return;
+                              setCustomCollections(ccs => ccs.map(c => {
+                                if (c.id !== cc.id) return c;
+                                const items = [...c.items];
+                                const fi = items.findIndex((i: any) => i.id === from);
+                                const ti = items.findIndex((i: any) => i.id === to);
+                                if (fi < 0 || ti < 0) return c;
+                                const [moved] = items.splice(fi, 1);
+                                items.splice(ti, 0, moved);
+                                return { ...c, items };
+                              }));
+                            },
+                            onDragEnd: () => { (cc as any)._dragId = null; (cc as any)._overId = null; },
+                          }}>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 32px",gap:10,alignItems:"center"}}>
+                              <input value={item.name} onChange={e => updateCustomItem(cc.id, item.id, "name", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box" })} />
+                              {g.type === "color" ? (
+                                <PrimSelector value={item.value} primitives={primitives} primGroups={primGroups} onChange={(v: string) => updateCustomItem(cc.id, item.id, "value", v)} mode="Value" />
+                              ) : g.type === "fontFamily" ? (
+                                <select value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", fontSize: 11, padding: "8px 6px", fontFamily: item.value })}>
+                                  {FONT_FAMILIES.map(f => <option key={f.value} value={f.value} style={{fontFamily: f.value}}>{f.label}</option>)}
+                                  {!FONT_FAMILIES.some(f => f.value === item.value) && <option value={item.value}>{item.value}</option>}
+                                </select>
+                              ) : (
+                                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                                  <input value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box", fontFamily: "monospace" })} />
+                                  {g.unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{g.unit}</span>}
+                                </div>
+                              )}
+                              <button onClick={() => deleteCustomItem(cc.id, item.id)} style={{...delBtn,fontSize:18}}>x</button>
+                            </div>
+                          </DraggableRow>
+                        ))}
+                      </div>
+                    )}
+                    <AddRowBtn onClick={() => addCustomItem(cc.id, g.name)} label={`+ Add ${cc.jsonKey} token`} disabled={!cc.locked || !gLocked} />
                   </div>
-                </DraggableRow>
-              ))}
-              <AddRowBtn onClick={() => addCustomItem(cc.id)} label={`+ Add ${cc.jsonKey} token`} />
+                );
+              })}
             </div>
           ))}
 
