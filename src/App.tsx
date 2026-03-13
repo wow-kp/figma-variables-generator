@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import type { PrimGroup, Primitives, ColorToken, SpacingToken, Typography, TextStyle, RadiusToken, BorderToken, ShadowToken, ZIndexToken, BreakpointToken, CustomCollection } from "./types";
-import { ALL_TABS, DEFAULT_ENABLED, DEFAULT_COLOR_GROUPS, DEFAULT_TS_GROUPS, STORAGE_KEY, buildDefaultPrimitives, buildDefaultPrimGroups, defaultTextStyles, defaultColors, defaultSpacing, defaultTypography, defaultRadius, defaultBorders, defaultShadows, defaultZIndex, defaultBreakpoints, TS_DECORATION_OPTIONS, FONT_FAMILIES, initIdCounter, uid, matchesSearch, loadSaved } from "./defaults";
+import { ALL_TABS, DEFAULT_ENABLED, DEFAULT_COLOR_GROUPS, DEFAULT_TS_GROUPS, STORAGE_KEY, buildDefaultPrimitives, buildDefaultPrimGroups, defaultTextStyles, defaultColors, defaultSpacing, defaultTypography, defaultRadius, defaultBorders, defaultShadows, defaultZIndex, defaultBreakpoints, TS_DECORATION_OPTIONS, FONT_FAMILIES, initIdCounter, uid, matchesSearch, loadSaved, isValidCSSIdentifier, sanitizeNumberInput, findDuplicateNames, findDuplicateNamesInGroups } from "./defaults";
 import { genPrimitivesJSON, genColorsJSON, genSpacingJSON, genTypographyJSON, genTextStylesJSON, genRadiusJSON, genBorderJSON, genShadowsJSON, genZIndexJSON, genBreakpointsJSON, genCustomJSON } from "./generators";
 import { useDraggable, useGroupDrag, GROUP_DRAG_TYPE } from "./hooks";
 import { AddRowBtn, TabHeader, DraggableRow, InlineLabel, PrimSelector, TextPreview, ShadowRow } from "./components";
@@ -32,6 +32,7 @@ export default function App() {
   const [copied,           setCopied]           = useState(false);
   const [importError,      setImportError]      = useState("");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -87,7 +88,7 @@ export default function App() {
 
   useEffect(() => {
     const snap = getSnapshot();
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({...snap, theme})); } catch { /* quota exceeded */ }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({...snap, theme})); setSaveError(""); } catch { setSaveError("Storage full — changes won't persist after reload. Export your files to avoid data loss."); }
     if (isUndoRedo.current) { isUndoRedo.current = false; return; }
     const h = historyRef.current;
     if (historyPos.current < h.length - 1) h.splice(historyPos.current + 1);
@@ -225,6 +226,18 @@ export default function App() {
 
   const copy = () => { navigator.clipboard.writeText(previewJSON); setCopied(true); setTimeout(()=>setCopied(false),2000); };
 
+  // ── Duplicate name detection ──────────────────────────────────────────────
+  const dupeSpacing = useMemo(() => findDuplicateNames(spacing), [spacing]);
+  const dupeRadius = useMemo(() => findDuplicateNames(radius), [radius]);
+  const dupeBorders = useMemo(() => findDuplicateNames(borders), [borders]);
+  const dupeShadows = useMemo(() => findDuplicateNames(shadows), [shadows]);
+  const dupeZIndex = useMemo(() => findDuplicateNames(zindex), [zindex]);
+  const dupeBreakpoints = useMemo(() => findDuplicateNames(breakpoints), [breakpoints]);
+  const dupeColors = useMemo(() => findDuplicateNamesInGroups(colors), [colors]);
+  const dupeTextStyles = useMemo(() => findDuplicateNamesInGroups(textStyles), [textStyles]);
+
+  const isDupe = (name: string, dupes: Set<string>) => dupes.has(name.trim().toLowerCase());
+
   // ── Reset ───────────────────────────────────────────────────────────────────
   const handleReset = () => {
     setPrimGroups(buildDefaultPrimGroups()); setPrimitives(buildDefaultPrimitives());
@@ -241,96 +254,118 @@ export default function App() {
   // ── Import ──────────────────────────────────────────────────────────────────
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
+    e.target.value = "";
     const reader = new FileReader();
     reader.onload = (ev) => {
+      let data: any;
+      try { data = JSON.parse((ev.target as FileReader).result as string); }
+      catch (err) { setImportError("Invalid JSON: " + (err instanceof Error ? err.message : "parse error")); return; }
+      if (typeof data !== "object" || data === null || Array.isArray(data)) { setImportError("Expected a JSON object, got " + (Array.isArray(data) ? "array" : typeof data) + "."); return; }
+      setImportError("");
       try {
-        const data = JSON.parse((ev.target as FileReader).result as string); setImportError("");
         if (tab==="Primitives") {
-          if (data.primitives) { const ng: PrimGroup[]=[],np: Primitives={}; let gi=900; Object.entries(data.primitives).forEach(([k,v]: [string,any])=>{ if(k==="$description")return; if(k==="base"){np.base={};Object.entries(v).forEach(([kk,vv]: [string,any])=>{if(vv?.["$value"])np.base[kk]=vv["$value"]});return;} if(typeof v==="object"){const sh=Object.keys(v).filter(s=>v[s]?.["$value"]);ng.push({id:gi++,key:k,label:k.charAt(0).toUpperCase()+k.slice(1),shades:sh});np[k]={};sh.forEach(s=>{np[k][s]=v[s]["$value"]});}}); if(ng.length){setPrimGroups(ng);setPrimitives(np);} else setImportError("No primitives found in file."); }
-          else setImportError("No primitives found in file.");
+          if (!data.primitives || typeof data.primitives !== "object") { setImportError("Expected top-level \"primitives\" key with color groups."); return; }
+          const ng: PrimGroup[]=[],np: Primitives={}; let gi=900;
+          Object.entries(data.primitives).forEach(([k,v]: [string,any])=>{
+            if(k.startsWith("$"))return;
+            if(k==="base"){np.base={};if(typeof v==="object")Object.entries(v).forEach(([kk,vv]: [string,any])=>{if(vv?.["$value"])np.base[kk]=vv["$value"]});return;}
+            if(typeof v!=="object"){return;}
+            const sh=Object.keys(v).filter(s=>!s.startsWith("$")&&v[s]?.["$value"]);
+            if(sh.length===0)return;
+            ng.push({id:gi++,key:k,label:k.charAt(0).toUpperCase()+k.slice(1),shades:sh});np[k]={};sh.forEach(s=>{np[k][s]=v[s]["$value"]});
+          });
+          if(ng.length){setPrimGroups(ng);setPrimitives(np);} else setImportError("No color groups with $value tokens found under \"primitives\".");
         }
         else if (tab==="Colors") {
-          if (data.color) { const cols: ColorToken[]=[]; let id=1000; const grps=new Set<string>(); Object.entries(data.color).forEach(([g,tokens]: [string,any])=>{if(typeof tokens!=="object"||tokens["$value"])return;grps.add(g);Object.entries(tokens).forEach(([n,t]: [string,any])=>{if(t["$value"])cols.push({id:id++,group:g,name:n,light:t["$value"],dark:t["$extensions"]?.mode?.dark||t["$value"],description:t["$description"]||""});})}); if(cols.length){setColors(cols);setColorGroups([...grps]);} else setImportError("No color tokens found in file."); }
-          else setImportError("No color tokens found in file.");
+          const root = data.color || data.colors;
+          if (!root || typeof root !== "object") { setImportError("Expected top-level \"color\" or \"colors\" key with grouped tokens."); return; }
+          const cols: ColorToken[]=[]; let id=1000; const grps=new Set<string>();
+          Object.entries(root).forEach(([g,tokens]: [string,any])=>{if(typeof tokens!=="object"||tokens["$value"])return;grps.add(g);Object.entries(tokens).forEach(([n,t]: [string,any])=>{if(t?.["$value"])cols.push({id:id++,group:g,name:n,light:t["$value"],dark:t["$extensions"]?.mode?.dark||t["$value"],description:t["$description"]||""});})});
+          if(cols.length){setColors(cols);setColorGroups([...grps]);} else setImportError("No tokens with $value found under color groups.");
         }
         else if (tab==="Spacing") {
-          if (data.spacing) { const sp: SpacingToken[]=[]; let id=2000; Object.entries(data.spacing).forEach(([n,t]: [string,any])=>{if(t["$value"])sp.push({id:id++,name:n,value:String(t["$value"]).replace("px","")})}); if(sp.length)setSpacing(sp); else setImportError("No spacing tokens found in file."); }
-          else setImportError("No spacing tokens found in file.");
+          if (!data.spacing || typeof data.spacing !== "object") { setImportError("Expected top-level \"spacing\" key with $value tokens."); return; }
+          const sp: SpacingToken[]=[]; let id=2000; Object.entries(data.spacing).forEach(([n,t]: [string,any])=>{if(t?.["$value"]!=null)sp.push({id:id++,name:n,value:String(t["$value"]).replace("px","")})});
+          if(sp.length)setSpacing(sp); else setImportError("No tokens with $value found under \"spacing\".");
         }
         else if (tab==="Border") {
-          if (data["border-width"]) { const b: BorderToken[]=[]; let id=3500; Object.entries(data["border-width"]).forEach(([n,t]: [string,any])=>{if(t["$value"])b.push({id:id++,name:n,value:String(t["$value"]).replace("px","")})}); if(b.length)setBorders(b); else setImportError("No border tokens found in file."); }
-          else setImportError("No border tokens found in file.");
+          if (!data["border-width"] || typeof data["border-width"] !== "object") { setImportError("Expected top-level \"border-width\" key with $value tokens."); return; }
+          const b: BorderToken[]=[]; let id=3500; Object.entries(data["border-width"]).forEach(([n,t]: [string,any])=>{if(t?.["$value"]!=null)b.push({id:id++,name:n,value:String(t["$value"]).replace("px","")})});
+          if(b.length)setBorders(b); else setImportError("No tokens with $value found under \"border-width\".");
         }
         else if (tab==="Radius") {
-          if (data.radius) { const r: RadiusToken[]=[]; let id=3000; Object.entries(data.radius).forEach(([n,t]: [string,any])=>{if(t["$value"])r.push({id:id++,name:n,value:String(t["$value"]).replace("px","")})}); if(r.length)setRadius(r); else setImportError("No radius tokens found in file."); }
-          else setImportError("No radius tokens found in file.");
+          if (!data.radius || typeof data.radius !== "object") { setImportError("Expected top-level \"radius\" key with $value tokens."); return; }
+          const r: RadiusToken[]=[]; let id=3000; Object.entries(data.radius).forEach(([n,t]: [string,any])=>{if(t?.["$value"]!=null)r.push({id:id++,name:n,value:String(t["$value"]).replace("px","")})});
+          if(r.length)setRadius(r); else setImportError("No tokens with $value found under \"radius\".");
         }
         else if (tab==="Text Styles") {
           const ts: TextStyle[]=[]; let id=9900; const grps: string[]=[];
           Object.entries(data).forEach(([g,tokens]: [string,any])=>{
-            if(typeof tokens!=="object")return;
+            if(typeof tokens!=="object"||g.startsWith("$"))return;
             const hasTextStyles=Object.values(tokens).some((t: any)=>t&&t["$type"]==="textStyle");
             if(!hasTextStyles)return;
             if(!grps.includes(g))grps.push(g);
             Object.entries(tokens).forEach(([n,t]: [string,any])=>{
-              if(t["$type"]!=="textStyle"||!t["$value"])return;
+              if(t?.["$type"]!=="textStyle"||!t?.["$value"])return;
               const v=t["$value"];
               ts.push({id:id++,group:g,name:n,fontFamily:v.fontFamily||"Inter, sans-serif",fontSize:String(typeof v.fontSize==="object"?v.fontSize.value:v.fontSize||16),fontWeight:String(v.fontWeight||400),lineHeight:String(typeof v.lineHeight==="object"?v.lineHeight.value:v.lineHeight||1.5),letterSpacing:String(typeof v.letterSpacing==="object"?v.letterSpacing.value:v.letterSpacing||0),paragraphSpacing:String(typeof v.paragraphSpacing==="object"?v.paragraphSpacing.value:v.paragraphSpacing||0),textDecoration:v.textDecoration||"NONE"});
             });
           });
-          if(ts.length){setTextStyles(ts);setTsGroups(grps);} else setImportError("No text styles found in file.");
+          if(ts.length){setTextStyles(ts);setTsGroups(grps);} else setImportError("No groups with $type: \"textStyle\" tokens found. Expected { groupName: { styleName: { $type: \"textStyle\", $value: {...} } } }.");
         }
         else if (tab==="Typography") {
           const fam: SpacingToken[]=[], sz: SpacingToken[]=[], wt: SpacingToken[]=[], lh: SpacingToken[]=[]; let id=5000;
           const src = data.family || data.font?.family;
-          if(src) Object.entries(src).forEach(([n,t]: [string,any])=>{if(t["$value"])fam.push({id:id++,name:n,value:typeof t["$value"]==="object"?String(t["$value"].value):String(t["$value"])});});
+          if(src&&typeof src==="object") Object.entries(src).forEach(([n,t]: [string,any])=>{if(t?.["$value"]!=null)fam.push({id:id++,name:n,value:typeof t["$value"]==="object"?String(t["$value"].value):String(t["$value"])});});
           const srcSz = data.size || data.font?.size;
-          if(srcSz) Object.entries(srcSz).forEach(([n,t]: [string,any])=>{if(t["$value"]!=null)sz.push({id:id++,name:n,value:String(typeof t["$value"]==="object"?t["$value"].value:t["$value"]).replace("px","")});});
+          if(srcSz&&typeof srcSz==="object") Object.entries(srcSz).forEach(([n,t]: [string,any])=>{if(t?.["$value"]!=null)sz.push({id:id++,name:n,value:String(typeof t["$value"]==="object"?t["$value"].value:t["$value"]).replace("px","")});});
           const srcWt = data.weight || data.font?.weight;
-          if(srcWt) Object.entries(srcWt).forEach(([n,t]: [string,any])=>{if(t["$value"]!=null)wt.push({id:id++,name:n,value:String(t["$value"])});});
+          if(srcWt&&typeof srcWt==="object") Object.entries(srcWt).forEach(([n,t]: [string,any])=>{if(t?.["$value"]!=null)wt.push({id:id++,name:n,value:String(t["$value"])});});
           const srcLh = data["line-height"] || data.font?.["line-height"];
-          if(srcLh) Object.entries(srcLh).forEach(([n,t]: [string,any])=>{if(t["$value"]!=null)lh.push({id:id++,name:n,value:String(t["$value"])});});
+          if(srcLh&&typeof srcLh==="object") Object.entries(srcLh).forEach(([n,t]: [string,any])=>{if(t?.["$value"]!=null)lh.push({id:id++,name:n,value:String(t["$value"])});});
           if(fam.length||sz.length||wt.length||lh.length) setTypography({families:fam.length?fam:typography.families,sizes:sz.length?sz:typography.sizes,weights:wt.length?wt:typography.weights,lineHeights:lh.length?lh:typography.lineHeights});
-          else setImportError("No typography tokens found in file.");
+          else setImportError("No typography tokens found. Expected keys: family/size/weight/line-height (or nested under font.*).");
         }
         else if (tab==="Shadows") {
           const sh: ShadowToken[]=[]; let id=6000;
-          Object.entries(data).forEach(([n,t]: [string,any])=>{if(t?.["$value"]!=null)sh.push({id:id++,name:n,value:String(t["$value"])});});
-          if(sh.length) setShadows(sh); else setImportError("No shadow tokens found in file.");
+          Object.entries(data).forEach(([n,t]: [string,any])=>{if(!n.startsWith("$")&&t?.["$value"]!=null)sh.push({id:id++,name:n,value:String(t["$value"])});});
+          if(sh.length) setShadows(sh); else setImportError("No tokens with $value found at the top level.");
         }
         else if (tab==="Z-Index") {
           const zi: ZIndexToken[]=[]; let id=7000;
           const src = data["z-index"] || data.zindex || data;
-          Object.entries(src).forEach(([n,t]: [string,any])=>{if(t?.["$value"]!=null)zi.push({id:id++,name:n,value:String(t["$value"])});});
-          if(zi.length) setZIndex(zi); else setImportError("No z-index tokens found in file.");
+          if(typeof src==="object") Object.entries(src).forEach(([n,t]: [string,any])=>{if(!n.startsWith("$")&&t?.["$value"]!=null)zi.push({id:id++,name:n,value:String(t["$value"])});});
+          if(zi.length) setZIndex(zi); else setImportError("No z-index tokens found. Expected keys: z-index, zindex, or top-level $value tokens.");
         }
         else if (tab==="Breakpoints") {
           const bp: BreakpointToken[]=[]; let id=7500;
           const src = data.breakpoints || data.screens || data;
-          const entries = Object.entries(src).filter(([,t]: [string,any])=>t?.["$value"]!=null);
+          if(typeof src!=="object") { setImportError("No breakpoint data found. Expected keys: breakpoints, screens, or top-level $value tokens."); return; }
+          const entries = Object.entries(src).filter(([n,t]: [string,any])=>!n.startsWith("$")&&t?.["$value"]!=null);
           entries.forEach(([n,t]: [string,any],i)=>{bp.push({id:id++,name:n,value:String(typeof t["$value"]==="object"?t["$value"].value:t["$value"]).replace("px",""),max:i<entries.length-1?String(typeof (entries[i+1][1] as any)["$value"]==="object"?(entries[i+1][1] as any)["$value"].value:(entries[i+1][1] as any)["$value"]).replace("px",""):""});});
-          if(bp.length) setBreakpoints(bp); else setImportError("No breakpoint tokens found in file.");
+          if(bp.length) setBreakpoints(bp); else setImportError("No breakpoint tokens with $value found.");
         }
         else {
           const cc = customCollections.find(c => c.name === tab);
           if (cc) {
-            const key = Object.keys(data).find(k => k !== "$description") || cc.jsonKey;
+            const key = Object.keys(data).find(k => !k.startsWith("$")) || cc.jsonKey;
             const tokens = data[key] || data;
+            if(typeof tokens!=="object") { setImportError("No valid token object found in file."); return; }
             const items: { id: number; name: string; group: string; value: string }[] = []; let id = 8000;
             Object.entries(tokens).forEach(([n, t]: [string, any]) => {
-              if (t?.["$value"] !== undefined) {
+              if (!n.startsWith("$") && t?.["$value"] !== undefined) {
                 const val = typeof t["$value"] === "object" ? String(t["$value"].value) : String(t["$value"]);
                 items.push({ id: id++, name: n, value: val, group: cc.groups[0]?.name || "default" });
               }
             });
             if (items.length) {
               setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, items } : c));
-            } else setImportError("No tokens found in file.");
+            } else setImportError("No tokens with $value found in \"" + key + "\".");
           }
         }
-      } catch { setImportError("Invalid JSON."); }
+      } catch (err) { setImportError("Import failed: " + (err instanceof Error ? err.message : "unknown error")); }
     };
-    reader.readAsText(file); e.target.value="";
+    reader.readAsText(file);
   };
 
   // ── Generic list helpers ────────────────────────────────────────────────────
@@ -463,6 +498,8 @@ export default function App() {
         </div>
       </div>
 
+      {saveError && <div className="save-error-banner">{saveError}</div>}
+
       <div className="app-body">
 
         {/* Sidebar */}
@@ -561,7 +598,7 @@ export default function App() {
                         <DraggableRow key={c.id} id={c.id} dragHandlers={colorDrag} checked={selected.has(c.id)} onCheck={toggleSelect}>
                           <div className="grid-row grid-colors" style={{alignItems:"start"}}>
                             <select value={c.group} onChange={e=>updateColor(c.id,"group",e.target.value)} className="inp inp--full">{colorGroups.map(g2=><option key={g2}>{g2}</option>)}</select>
-                            <div><input value={c.name} onChange={e=>updateColor(c.id,"name",e.target.value)} className="inp inp--full" /><input value={c.description} onChange={e=>updateColor(c.id,"description",e.target.value)} placeholder="Description" className="inp inp--full inp--desc" /></div>
+                            <div><input value={c.name} onChange={e=>updateColor(c.id,"name",e.target.value)} className={`inp inp--full${isDupe(c.name,dupeColors)?" inp--dupe":""}`} />{isDupe(c.name,dupeColors)&&<div className="dupe-warn">Duplicate name in group</div>}<input value={c.description} onChange={e=>updateColor(c.id,"description",e.target.value)} placeholder="Description" className="inp inp--full inp--desc" /></div>
                             <PrimSelector value={c.light} primitives={primitives} primGroups={primGroups} onChange={(v: string)=>updateColor(c.id,"light",v)} mode="Light" />
                             <PrimSelector value={c.dark}  primitives={primitives} primGroups={primGroups} onChange={(v: string)=>updateColor(c.id,"dark",v)}  mode="Dark" />
                             <div className="btn-group" style={{paddingTop:8}}><button onClick={()=>dupColor(c.id)} className="dup-btn">⧉</button><button onClick={()=>setColors(c2=>c2.filter(i=>i.id!==c.id))} className="del-btn" style={{fontSize:18}}>x</button></div>
@@ -591,8 +628,8 @@ export default function App() {
                 <DraggableRow key={sp.id} id={sp.id} dragHandlers={spacingDrag} checked={selected.has(sp.id)} onCheck={toggleSelect}>
                   <div className="grid-row grid-spacing">
                     <span className="prefix">spacing /</span>
-                    <input value={sp.name} onChange={e=>updateList(setSpacing,sp.id,"name",e.target.value)} className="inp inp--full" />
-                    <div className="flex-row"><input value={sp.value} onChange={e=>updateList(setSpacing,sp.id,"value",e.target.value)} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
+                    <div><input value={sp.name} onChange={e=>updateList(setSpacing,sp.id,"name",e.target.value)} className={`inp inp--full${isDupe(sp.name,dupeSpacing)?" inp--dupe":""}`} />{isDupe(sp.name,dupeSpacing)&&<div className="dupe-warn">Duplicate name</div>}</div>
+                    <div className="flex-row"><input value={sp.value} onChange={e=>updateList(setSpacing,sp.id,"value",sanitizeNumberInput(e.target.value,sp.value))} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
                     <div className="flex-row gap-8"><div className="spacing-bar" style={{width:Math.min(parseInt(sp.value)||0,220)+"px"}} /><span className="prefix">{sp.value}px</span></div>
                     <div className="btn-group"><button onClick={()=>dupInList(setSpacing,sp.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setSpacing,sp.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
                   </div>
@@ -668,7 +705,7 @@ export default function App() {
                   {filteredTs.map(s => (
                     <DraggableRow key={s.id} id={s.id} dragHandlers={textStylesDrag} checked={selected.has(s.id)} onCheck={toggleSelect}>
                       <div className="grid-row grid-ts">
-                        <input value={s.name} onChange={e=>updateTextStyle(s.id,"name",e.target.value)} className="inp inp--full" />
+                        <div><input value={s.name} onChange={e=>updateTextStyle(s.id,"name",e.target.value)} className={`inp inp--full${isDupe(s.name,dupeTextStyles)?" inp--dupe":""}`} />{isDupe(s.name,dupeTextStyles)&&<div className="dupe-warn">Duplicate name</div>}</div>
                         <select value={s.fontFamily} onChange={e=>updateTextStyle(s.id,"fontFamily",e.target.value)} className="inp inp--full inp--sm" style={{fontFamily:s.fontFamily}}>
                           {FONT_FAMILIES.map(f=><option key={f.value} value={f.value} style={{fontFamily:f.value}}>{f.label}</option>)}
                           {!FONT_FAMILIES.some(f=>f.value===s.fontFamily) && <option value={s.fontFamily}>{s.fontFamily}</option>}
@@ -706,8 +743,8 @@ export default function App() {
                   <div key={r.id} draggable onDragStart={()=>radiusDrag.onDragStart(r.id)} onDragOver={e=>radiusDrag.onDragOver(e,r.id)} onDrop={()=>radiusDrag.onDrop()} onDragEnd={()=>radiusDrag.onDragEnd()} className={`radius-card ${selected.has(r.id)?"radius-card--selected":"radius-card--default"}`}>
                     <input type="checkbox" checked={selected.has(r.id)} onChange={()=>toggleSelect(r.id)} className="chk radius-chk" />
                     <div className="radius-preview" style={{borderRadius:Math.min(parseInt(r.value)||0,30)+"px"}} />
-                    <input value={r.name} onChange={e=>updateList(setRadius,r.id,"name",e.target.value)} className="inp inp--full inp--center inp--compact" />
-                    <div className="flex-row w-full"><input value={r.value} onChange={e=>updateList(setRadius,r.id,"value",e.target.value)} className="inp inp--center inp--mono inp--compact" style={{flex:1,width:0}} /><span className="unit">px</span></div>
+                    <div><input value={r.name} onChange={e=>updateList(setRadius,r.id,"name",e.target.value)} className={`inp inp--full inp--center inp--compact${isDupe(r.name,dupeRadius)?" inp--dupe":""}`} />{isDupe(r.name,dupeRadius)&&<div className="dupe-warn">Duplicate</div>}</div>
+                    <div className="flex-row w-full"><input value={r.value} onChange={e=>updateList(setRadius,r.id,"value",sanitizeNumberInput(e.target.value,r.value,0))} className="inp inp--center inp--mono inp--compact" style={{flex:1,width:0}} /><span className="unit">px</span></div>
                     <div className="btn-group"><button onClick={()=>dupInList(setRadius,r.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setRadius,r.id)} className="del-btn" style={{fontSize:12}}>Remove</button></div>
                   </div>
                 ))}
@@ -731,8 +768,8 @@ export default function App() {
                 <DraggableRow key={b.id} id={b.id} dragHandlers={borderDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
                   <div className="grid-row grid-border">
                     <span className="prefix">border /</span>
-                    <input value={b.name} onChange={e=>updateList(setBorders,b.id,"name",e.target.value)} className="inp inp--full" />
-                    <div className="flex-row"><input value={b.value} onChange={e=>updateList(setBorders,b.id,"value",e.target.value)} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
+                    <div><input value={b.name} onChange={e=>updateList(setBorders,b.id,"name",e.target.value)} className={`inp inp--full${isDupe(b.name,dupeBorders)?" inp--dupe":""}`} />{isDupe(b.name,dupeBorders)&&<div className="dupe-warn">Duplicate name</div>}</div>
+                    <div className="flex-row"><input value={b.value} onChange={e=>updateList(setBorders,b.id,"value",sanitizeNumberInput(e.target.value,b.value,0))} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
                     <div style={{display:"flex",alignItems:"center"}}><div className="border-bar" style={{height:Math.max(parseInt(b.value)||0,1),maxHeight:20}} /></div>
                     <div className="btn-group"><button onClick={()=>dupInList(setBorders,b.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setBorders,b.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
                   </div>
@@ -761,7 +798,8 @@ export default function App() {
                   onChangeValue={(v: string)=>updateList(setShadows,sh.id,"value",v)}
                   onDelete={()=>deleteList(setShadows,sh.id)}
                   onDuplicate={()=>dupInList(setShadows,sh.id)}
-                  checked={selected.has(sh.id)} onCheck={toggleSelect} />
+                  checked={selected.has(sh.id)} onCheck={toggleSelect}
+                  dupeWarning={isDupe(sh.name,dupeShadows)} />
               ))}
               <AddRowBtn onClick={()=>setShadows(s=>[...s,{id:uid(),name:"new",value:"0px 4px 12px 0px rgba(0,0,0,0.20)"}])} label="+ Add shadow token" />
             </div>
@@ -782,8 +820,8 @@ export default function App() {
                 <DraggableRow key={z.id} id={z.id} dragHandlers={zDrag} checked={selected.has(z.id)} onCheck={toggleSelect}>
                   <div className="grid-row grid-zindex">
                     <span className="prefix">z-index /</span>
-                    <input value={z.name} onChange={e=>updateList(setZIndex,z.id,"name",e.target.value)} className="inp" />
-                    <input value={z.value} onChange={e=>updateList(setZIndex,z.id,"value",e.target.value)} className="inp inp--mono" />
+                    <div><input value={z.name} onChange={e=>updateList(setZIndex,z.id,"name",e.target.value)} className={`inp${isDupe(z.name,dupeZIndex)?" inp--dupe":""}`} />{isDupe(z.name,dupeZIndex)&&<div className="dupe-warn">Duplicate name</div>}</div>
+                    <input value={z.value} onChange={e=>updateList(setZIndex,z.id,"value",sanitizeNumberInput(e.target.value,z.value))} className="inp inp--mono" />
                     <div className="btn-group"><button onClick={()=>dupInList(setZIndex,z.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setZIndex,z.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
@@ -807,9 +845,9 @@ export default function App() {
                 <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
                   <div className="grid-row grid-breakpoints">
                     <span className="prefix">breakpoint /</span>
-                    <input value={b.name} onChange={e=>updateList(setBreakpoints,b.id,"name",e.target.value)} className="inp inp--full" />
+                    <div><input value={b.name} onChange={e=>updateList(setBreakpoints,b.id,"name",e.target.value)} className={`inp inp--full${isDupe(b.name,dupeBreakpoints)?" inp--dupe":""}`} />{isDupe(b.name,dupeBreakpoints)&&<div className="dupe-warn">Duplicate name</div>}</div>
                     <div className="flex-row"><input value={b.value} onChange={e=>{
-                      const v = e.target.value;
+                      const v = sanitizeNumberInput(e.target.value,b.value,0);
                       setBreakpoints(list => { const ri = list.findIndex(bp => bp.id === b.id); return list.map((bp, i) => {
                         if (i === ri) return { ...bp, value: v };
                         if (i === ri - 1) return { ...bp, max: v };
@@ -817,7 +855,7 @@ export default function App() {
                       }); });
                     }} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
                     <div className="flex-row"><input value={b.max} onChange={e=>{
-                      const v = e.target.value;
+                      const v = sanitizeNumberInput(e.target.value,b.max,0);
                       setBreakpoints(list => { const ri = list.findIndex(bp => bp.id === b.id); return list.map((bp, i) => {
                         if (i === ri) return { ...bp, max: v };
                         if (i === ri + 1) return { ...bp, value: v };
@@ -852,7 +890,11 @@ export default function App() {
                 </label>
                 <label className="cc-settings__label">
                   JSON Key
-                  <input value={cc.jsonKey} disabled={cc.locked} onChange={e => updateCustomCollection(cc.id, "jsonKey", e.target.value)} className={`inp inp--mono${cc.locked?" inp--locked":""}`} style={{width:120}} />
+                  <input value={cc.jsonKey} disabled={cc.locked} onChange={e => {
+                    const v = e.target.value.replace(/[^a-zA-Z0-9_-]/g, "");
+                    updateCustomCollection(cc.id, "jsonKey", v);
+                  }} className={`inp inp--mono${cc.locked?" inp--locked":""}${!cc.locked&&cc.jsonKey&&!isValidCSSIdentifier(cc.jsonKey)?" inp--invalid":""}`} style={{width:120}} />
+                  {!cc.locked&&cc.jsonKey&&!isValidCSSIdentifier(cc.jsonKey)&&<div className="dupe-warn">Must start with a letter/underscore</div>}
                 </label>
                 <div className="cc-settings__actions">
                   {cc.locked ? (

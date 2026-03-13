@@ -158,3 +158,44 @@ export const matchesSearch = (q: string, ...fields: string[]) => {
 export function loadSaved() {
   try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
+
+// ── Validation helpers ──────────────────────────────────────────────────────
+
+/** Validates that a string is a valid CSS identifier (for JSON keys, CSS var names) */
+export const isValidCSSIdentifier = (s: string) => /^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(s);
+
+/** Sanitize a number input: returns "" for empty, clamped string for valid numbers, or previous value for NaN */
+export function sanitizeNumberInput(raw: string, prev: string, min?: number, max?: number): string {
+  if (raw === "" || raw === "-") return raw;
+  const n = Number(raw);
+  if (isNaN(n)) return prev;
+  if (min !== undefined && n < min) return String(min);
+  if (max !== undefined && n > max) return String(max);
+  return raw;
+}
+
+/** Find duplicate token names within a list, returns Set of duplicated names */
+export function findDuplicateNames<T extends { name: string }>(items: T[]): Set<string> {
+  const seen = new Set<string>();
+  const dupes = new Set<string>();
+  for (const item of items) {
+    const key = item.name.trim().toLowerCase();
+    if (key && seen.has(key)) dupes.add(key);
+    seen.add(key);
+  }
+  return dupes;
+}
+
+/** Find duplicate names within grouped items */
+export function findDuplicateNamesInGroups<T extends { name: string; group: string }>(items: T[]): Set<string> {
+  const byGroup: Record<string, string[]> = {};
+  const dupes = new Set<string>();
+  for (const item of items) {
+    const g = item.group;
+    if (!byGroup[g]) byGroup[g] = [];
+    const key = item.name.trim().toLowerCase();
+    if (key && byGroup[g].includes(key)) dupes.add(key);
+    byGroup[g].push(key);
+  }
+  return dupes;
+}
