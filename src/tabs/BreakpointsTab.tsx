@@ -37,6 +37,7 @@ export function BreakpointsTab({
         {["Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
         </div>
       </div>
+      {breakpoints.filter(b => matchesSearch(search, b.name, b.value, b.max)).length === 0 && <div className="empty-state">{search ? "No breakpoint tokens match your filter." : "No breakpoint tokens yet. Click \"+ Add breakpoint token\" below to create one."}</div>}
       {breakpoints.filter(b => matchesSearch(search, b.name, b.value, b.max)).map(b => (
         <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
           <div className="grid-row grid-breakpoints">

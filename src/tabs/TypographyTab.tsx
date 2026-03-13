@@ -33,6 +33,7 @@ export function TypographyTab({
             {["Name","Value",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
             </div>
           </div>
+          {typography[key].filter(item => matchesSearch(search, item.name, item.value)).length === 0 && <div className="empty-state">{search ? "No tokens match your filter." : "No tokens yet. Add one below."}</div>}
           {typography[key].filter(item => matchesSearch(search, item.name, item.value)).map(item => (
             <DraggableRow key={item.id} id={item.id} dragHandlers={typoDragMap[key]} checked={selected.has(item.id)} onCheck={toggleSelect}>
               <div className="grid-row grid-typo">
@@ -45,7 +46,7 @@ export function TypographyTab({
                 ) : (
                   <input value={item.value} onChange={e=>setTypography(t=>({...t,[key]:t[key].map(i=>i.id===item.id?{...i,value:e.target.value}:i)}))} className="inp inp--full inp--mono" />
                 )}{unit && <span className="unit">{unit}</span>}</div>
-                <div className="btn-group"><button onClick={()=>setTypography(t=>{const arr=[...t[key]];const idx=arr.findIndex(i=>i.id===item.id);if(idx<0)return t;arr.splice(idx+1,0,{...arr[idx],id:uid(),name:arr[idx].name+" copy"});return{...t,[key]:arr};})} className="dup-btn">⧉</button><button onClick={()=>setTypography(t=>({...t,[key]:t[key].filter(i=>i.id!==item.id)}))} className="del-btn" style={{fontSize:18}}>x</button></div>
+                <div className="btn-group"><button onClick={()=>setTypography(t=>{const arr=[...t[key]];const idx=arr.findIndex(i=>i.id===item.id);if(idx<0)return t;arr.splice(idx+1,0,{...arr[idx],id:uid(),name:arr[idx].name+" copy"});return{...t,[key]:arr};})} aria-label={"Duplicate "+item.name} className="dup-btn">⧉</button><button onClick={()=>setTypography(t=>({...t,[key]:t[key].filter(i=>i.id!==item.id)}))} aria-label={"Delete "+item.name} className="del-btn" style={{fontSize:18}}>x</button></div>
               </div>
             </DraggableRow>
           ))}

@@ -32,6 +32,7 @@ export function RadiusTab({
       <TabHeader title="Border Radius Tokens" description="Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
       <div className="radius-select-all">{selectAllChk(radius.map(r=>r.id))}<span className="radius-select-label">Select all</span></div>
       <div className="radius-cards">
+        {radius.filter(r => matchesSearch(search, r.name, r.value)).length === 0 && <div className="empty-state">{search ? "No radius tokens match your filter." : "No radius tokens yet. Click \"+ Add radius token\" below to create one."}</div>}
         {radius.filter(r => matchesSearch(search, r.name, r.value)).map(r => (
           <div key={r.id} draggable onDragStart={()=>radiusDrag.onDragStart(r.id)} onDragOver={e=>radiusDrag.onDragOver(e,r.id)} onDrop={()=>radiusDrag.onDrop()} onDragEnd={()=>radiusDrag.onDragEnd()} className={`radius-card ${selected.has(r.id)?"radius-card--selected":"radius-card--default"}`}>
             <input type="checkbox" checked={selected.has(r.id)} onChange={()=>toggleSelect(r.id)} className="chk radius-chk" />

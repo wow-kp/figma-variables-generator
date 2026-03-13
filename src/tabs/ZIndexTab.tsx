@@ -37,6 +37,7 @@ export function ZIndexTab({
         {["Prefix","Name","Value",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
         </div>
       </div>
+      {zindex.filter(z => matchesSearch(search, z.name, z.value)).length === 0 && <div className="empty-state">{search ? "No z-index tokens match your filter." : "No z-index tokens yet. Click \"+ Add z-index token\" below to create one."}</div>}
       {zindex.filter(z => matchesSearch(search, z.name, z.value)).map(z => (
         <DraggableRow key={z.id} id={z.id} dragHandlers={zDrag} checked={selected.has(z.id)} onCheck={toggleSelect}>
           <div className="grid-row grid-zindex">

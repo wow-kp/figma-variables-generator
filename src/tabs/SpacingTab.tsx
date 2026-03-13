@@ -37,6 +37,7 @@ export function SpacingTab({
         {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
         </div>
       </div>
+      {spacing.filter(sp => matchesSearch(search, sp.name, sp.value)).length === 0 && <div className="empty-state">{search ? "No spacing tokens match your filter." : "No spacing tokens yet. Click \"+ Add spacing token\" below to create one."}</div>}
       {spacing.filter(sp => matchesSearch(search, sp.name, sp.value)).map(sp => (
         <DraggableRow key={sp.id} id={sp.id} dragHandlers={spacingDrag} checked={selected.has(sp.id)} onCheck={toggleSelect}>
           <div className="grid-row grid-spacing">

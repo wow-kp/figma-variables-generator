@@ -38,6 +38,7 @@ export function ShadowsTab({
         <span className="col-hdr-label flex-shrink-0" style={{width:80}}>Preview</span>
         <span className="flex-shrink-0" style={{width:32}}></span>
       </div>
+      {shadows.filter(sh => matchesSearch(search, sh.name, sh.value)).length === 0 && <div className="empty-state">{search ? "No shadow tokens match your filter." : "No shadow tokens yet. Click \"+ Add shadow token\" below to create one."}</div>}
       {shadows.filter(sh => matchesSearch(search, sh.name, sh.value)).map(sh => (
         <ShadowRow key={sh.id} sh={sh} dragHandlers={shadowDrag}
           onChangeName={(v: string)=>updateList(setShadows,sh.id,"name",v)}

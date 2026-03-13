@@ -481,13 +481,13 @@ export default function App() {
         </div>
         <div className="app-header__actions">
           <div className="app-header__icon-group">
-            <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="icon-btn icon-btn--enabled">{theme === "dark" ? "\u2600" : "\u263E"}</button>
-            <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" className={`icon-btn ${canUndo?"icon-btn--enabled":"icon-btn--disabled"}`}>↩</button>
-            <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" className={`icon-btn ${canRedo?"icon-btn--enabled":"icon-btn--disabled"}`}>↪</button>
+            <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="icon-btn icon-btn--enabled">{theme === "dark" ? "\u2600" : "\u263E"}</button>
+            <button onClick={undo} disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)" className={`icon-btn ${canUndo?"icon-btn--enabled":"icon-btn--disabled"}`}>↩</button>
+            <button onClick={redo} disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl+Shift+Z)" className={`icon-btn ${canRedo?"icon-btn--enabled":"icon-btn--disabled"}`}>↪</button>
           </div>
-          <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={handleImport} />
+          <input ref={fileRef} type="file" accept=".json" aria-label="Import JSON file" style={{display:"none"}} onChange={handleImport} />
           {showResetConfirm ? (
-            <div className="reset-confirm">
+            <div className="reset-confirm" role="alertdialog" aria-label="Reset confirmation" onKeyDown={e=>{if(e.key==="Escape")setShowResetConfirm(false);}}>
               <span className="reset-confirm__text">Reset everything?</span>
               <button onClick={exportBackup} className="reset-confirm__cancel">Export backup first</button>
               <button onClick={handleReset} className="reset-confirm__yes">Yes, reset</button>
@@ -497,9 +497,12 @@ export default function App() {
             <button onClick={()=>setShowResetConfirm(true)} className="global-reset-btn">Reset</button>
           )}
           <div className="dl-trigger">
-            <button onClick={()=>setShowDl(v=>!v)} className="dl-trigger__btn">Download Files {showDl?"▴":"▾"}</button>
+            <button onClick={()=>setShowDl(v=>!v)} aria-expanded={showDl} aria-haspopup="true" className="dl-trigger__btn">Download Files {showDl?"▴":"▾"}</button>
             {showDl && (
-              <div className="dl-dropdown">
+              <div className="dl-dropdown" role="dialog" aria-label="Download files" onKeyDown={e=>{
+                if(e.key==="Escape"){e.stopPropagation();setShowDl(false);return;}
+                if(e.key==="Tab"){const el=e.currentTarget;const focusable=el.querySelectorAll<HTMLElement>("button,a,[tabindex]:not([tabindex=\"-1\"]),input,select");if(focusable.length===0)return;const first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey){if(document.activeElement===first){e.preventDefault();last.focus();}}else{if(document.activeElement===last){e.preventDefault();first.focus();}}}
+              }}>
                 <div onClick={()=>setShowDl(false)} className="dl-backdrop" />
                 <DownloadPanel enabled={enabledTabs} primGroups={primGroups} primitives={primitives} colors={colors} spacing={spacing} typography={typography} textStyles={textStyles} radius={radius} borders={borders} shadows={shadows} zindex={zindex} breakpoints={breakpoints} customCollections={customCollections} />
               </div>
@@ -527,7 +530,7 @@ export default function App() {
                   }
                   setTab(t);setTabResetConfirm(false);setSelected(new Set());setSearch("");
                 }} className={`sidebar__tab ${active?"sidebar__tab--active":enabled?"sidebar__tab--on":"sidebar__tab--off"}`}>{t}</button>
-                <div onClick={()=>toggleTab(t)} title={enabled?"Exclude from export":"Include in export"} className="sidebar__toggle-wrap">
+                <div role="switch" aria-checked={enabled} aria-label={t+" export toggle"} tabIndex={0} onClick={()=>toggleTab(t)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggleTab(t);}}} title={enabled?"Exclude from export":"Include in export"} className="sidebar__toggle-wrap">
                   <div className={`sidebar__toggle ${enabled?"sidebar__toggle--on":"sidebar__toggle--off"}`}>
                     <div className={`sidebar__knob ${enabled?"sidebar__knob--on":"sidebar__knob--off"}`} />
                   </div>

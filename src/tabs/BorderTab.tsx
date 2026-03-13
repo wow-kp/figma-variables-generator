@@ -37,6 +37,7 @@ export function BorderTab({
         {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
         </div>
       </div>
+      {borders.filter(b => matchesSearch(search, b.name, b.value)).length === 0 && <div className="empty-state">{search ? "No border tokens match your filter." : "No border tokens yet. Click \"+ Add border token\" below to create one."}</div>}
       {borders.filter(b => matchesSearch(search, b.name, b.value)).map(b => (
         <DraggableRow key={b.id} id={b.id} dragHandlers={borderDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
           <div className="grid-row grid-border">
