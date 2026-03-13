@@ -134,8 +134,8 @@ function genRadiusJSON(radius: any[])       { const t: any={}; radius.forEach(r 
 function genBorderJSON(borders: any[])      { const t: any={}; borders.forEach(b      => { t[b.name]       = { "$type":"dimension", "$value":{ value:parseFloat(b.value)||0, unit:"px" } }; }); return JSON.stringify(t,null,2); }
 function genCustomJSON(items: any[], type: string, unit: string) {
   const t: any={};
+  const isNum = type==="number"||type==="dimension"||type==="duration";
   items.forEach(i => {
-    const isNum = type==="number"||type==="dimension"||type==="duration";
     const val = isNum ? (parseFloat(i.value)||0) : i.value;
     t[i.name] = { "$type":type, "$value": unit ? { value:val, unit } : val };
   });
@@ -400,7 +400,7 @@ export default function App() {
   const addCustomCollection = () => {
     const id = uid();
     const name = "Custom " + id;
-    setCustomCollections(cc => [...cc, { id, name, jsonKey: "custom-" + id, type: "number", unit: "", items: [] }]);
+    setCustomCollections(cc => [...cc, { id, name, jsonKey: "custom-" + id, type: "number", unit: "", items: [], locked: false }]);
     setEnabledTabs(prev => { const next = new Set(prev); next.add(name); return next; });
     setTab(name);
   };
@@ -433,7 +433,7 @@ export default function App() {
   const deleteCustomItem = (collId: number, itemId: number) =>
     setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: c.items.filter((i: any) => i.id !== itemId) } : c));
   const addCustomItem = (collId: number) =>
-    setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: [...c.items, { id: uid(), name: "new", value: "0" }] } : c));
+    setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: [...c.items, { id: uid(), name: "new", value: c.type === "color" ? "{primitives.blue.600}" : c.type === "fontFamily" ? "Inter, sans-serif" : "0" }] } : c));
 
   const toggleTab = (t: string) => setEnabledTabs(prev => {
     const next = new Set(prev);
@@ -1033,36 +1033,63 @@ export default function App() {
               <div style={{display:"flex",gap:12,marginBottom:20,padding:12,background:"#111118",borderRadius:8,border:"1px solid #1e1e30",flexWrap:"wrap",alignItems:"center"}}>
                 <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"#777"}}>
                   Tab Name
-                  <input value={cc.name} onChange={e => {
+                  <input value={cc.name} disabled={cc.locked} onChange={e => {
                     const old = cc.name;
                     const nv = e.target.value;
                     setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, name: nv } : c));
                     setEnabledTabs(prev => { const next = new Set(prev); if (next.has(old)) { next.delete(old); next.add(nv); } return next; });
                     setTab(nv);
-                  }} style={inp({ width: 120 })} />
+                  }} style={inp({ width: 120, opacity: cc.locked ? 0.5 : 1 })} />
                 </label>
                 <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"#777"}}>
                   JSON Key
-                  <input value={cc.jsonKey} onChange={e => updateCustomCollection(cc.id, "jsonKey", e.target.value)} style={inp({ width: 120, fontFamily: "monospace" })} />
+                  <input value={cc.jsonKey} disabled={cc.locked} onChange={e => updateCustomCollection(cc.id, "jsonKey", e.target.value)} style={inp({ width: 120, fontFamily: "monospace", opacity: cc.locked ? 0.5 : 1 })} />
                 </label>
                 <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"#777"}}>
-                  Type
-                  <select value={cc.type} onChange={e => updateCustomCollection(cc.id, "type", e.target.value)} style={inp({ width: 110, fontSize: 11, padding: "8px 6px" })}>
-                    {["number","dimension","duration","string","color","fontFamily","fontWeight","cubicBezier"].map(t => <option key={t} value={t}>{t}</option>)}
+                  Value Type
+                  <select value={cc.type + (cc.unit ? "|" + cc.unit : "")} disabled={cc.locked} onChange={e => {
+                    const [type, unit = ""] = e.target.value.split("|");
+                    updateCustomCollection(cc.id, "type", type);
+                    updateCustomCollection(cc.id, "unit", unit);
+                  }} style={inp({ width: 160, fontSize: 11, padding: "8px 6px", opacity: cc.locked ? 0.5 : 1 })}>
+                    <optgroup label="Unitless">
+                      <option value="number">Number</option>
+                      <option value="string">String</option>
+                      <option value="color">Color</option>
+                      <option value="fontFamily">Font Family</option>
+                      <option value="fontWeight">Font Weight</option>
+                    </optgroup>
+                    <optgroup label="Dimension (length)">
+                      <option value="dimension|px">Dimension — px</option>
+                      <option value="dimension|rem">Dimension — rem</option>
+                      <option value="dimension|em">Dimension — em</option>
+                      <option value="dimension|%">Dimension — %</option>
+                      <option value="dimension|vw">Dimension — vw</option>
+                      <option value="dimension|vh">Dimension — vh</option>
+                    </optgroup>
+                    <optgroup label="Duration">
+                      <option value="duration|ms">Duration — ms</option>
+                      <option value="duration|s">Duration — s</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                      <option value="number|deg">Number — deg</option>
+                      <option value="cubicBezier">Cubic Bezier</option>
+                    </optgroup>
                   </select>
                 </label>
-                <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"#777"}}>
-                  Unit
-                  <select value={cc.unit} onChange={e => updateCustomCollection(cc.id, "unit", e.target.value)} style={inp({ width: 80, fontSize: 11, padding: "8px 6px" })}>
-                    {["","px","rem","em","%","ms","s","deg","vw","vh"].map(u => <option key={u} value={u}>{u || "(none)"}</option>)}
-                  </select>
-                </label>
-                <button onClick={() => deleteCustomCollection(cc.id)} style={{fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid #7f1d1d",background:"#1a0a0a",color:"#f87171",cursor:"pointer",marginLeft:"auto"}}>Delete Collection</button>
+                <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
+                  {cc.locked ? (
+                    cc.items.length === 0 && <button onClick={() => updateCustomCollection(cc.id, "locked", false)} style={tabBtnStyle}>Edit</button>
+                  ) : (
+                    <button onClick={() => updateCustomCollection(cc.id, "locked", true)} style={tabAddBtnStyle}>Save</button>
+                  )}
+                  <button onClick={() => deleteCustomCollection(cc.id)} style={{fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid #7f1d1d",background:"#1a0a0a",color:"#f87171",cursor:"pointer"}}>Delete Collection</button>
+                </div>
               </div>
 
               {/* Column headers */}
-              <div style={{display:"grid",gridTemplateColumns:"28px 1fr 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                {["","Name","Value",""].map((h,i) => <div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+              <div style={{display:"grid",gridTemplateColumns:"28px 100px 1fr 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
+                {["","Prefix","Name","Value",""].map((h,i) => <div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
               </div>
 
               {cc.items.map((item: any) => (
@@ -1085,12 +1112,22 @@ export default function App() {
                   },
                   onDragEnd: () => { (cc as any)._dragId = null; (cc as any)._overId = null; },
                 }}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 32px",gap:10,alignItems:"center"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 32px",gap:10,alignItems:"center"}}>
+                    <span style={{fontSize:12,color:"#777"}}>{cc.jsonKey} /</span>
                     <input value={item.name} onChange={e => updateCustomItem(cc.id, item.id, "name", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box" })} />
-                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                      <input value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box", fontFamily: "monospace" })} />
-                      {cc.unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{cc.unit}</span>}
-                    </div>
+                    {cc.type === "color" ? (
+                      <PrimSelector value={item.value} primitives={primitives} primGroups={primGroups} onChange={(v: string) => updateCustomItem(cc.id, item.id, "value", v)} mode="Value" />
+                    ) : cc.type === "fontFamily" ? (
+                      <select value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", fontSize: 11, padding: "8px 6px", fontFamily: item.value })}>
+                        {FONT_FAMILIES.map(f => <option key={f.value} value={f.value} style={{fontFamily: f.value}}>{f.label}</option>)}
+                        {!FONT_FAMILIES.some(f => f.value === item.value) && <option value={item.value}>{item.value}</option>}
+                      </select>
+                    ) : (
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <input value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box", fontFamily: "monospace" })} />
+                        {cc.unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{cc.unit}</span>}
+                      </div>
+                    )}
                     <button onClick={() => deleteCustomItem(cc.id, item.id)} style={{...delBtn,fontSize:18}}>x</button>
                   </div>
                 </DraggableRow>
