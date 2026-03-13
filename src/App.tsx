@@ -402,11 +402,68 @@ export default function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const fileRef = useRef<any>();
 
-  // Auto-save to localStorage
+  // ── Undo / Redo ──────────────────────────────────────────────────────────────
+  const historyRef = useRef<any[]>([]);
+  const historyPos = useRef(-1);
+  const isUndoRedo = useRef(false);
+  const MAX_HISTORY = 100;
+
+  const getSnapshot = useCallback(() => ({
+    tab, enabledTabs: [...enabledTabs], primGroups, primitives, colorGroups, colors,
+    spacing, typography, textStyles, tsGroups, radius, borders, shadows, zindex, breakpoints, customCollections,
+  }), [tab, enabledTabs, primGroups, primitives, colorGroups, colors, spacing, typography, textStyles, tsGroups, radius, borders, shadows, zindex, breakpoints, customCollections]);
+
+  const applySnapshot = useCallback((s: any) => {
+    isUndoRedo.current = true;
+    setTab(s.tab); setEnabledTabs(new Set(s.enabledTabs));
+    setPrimGroups(s.primGroups); setPrimitives(s.primitives);
+    setColorGroups(s.colorGroups); setColors(s.colors);
+    setSpacing(s.spacing); setTypography(s.typography);
+    setTextStyles(s.textStyles); setTsGroups(s.tsGroups);
+    setRadius(s.radius); setBorders(s.borders); setShadows(s.shadows);
+    setZIndex(s.zindex); setBreakpoints(s.breakpoints);
+    setCustomCollections(s.customCollections);
+  }, []);
+
+  const undo = useCallback(() => {
+    if (historyPos.current <= 0) return;
+    historyPos.current--;
+    applySnapshot(historyRef.current[historyPos.current]);
+  }, [applySnapshot]);
+
+  const redo = useCallback(() => {
+    if (historyPos.current >= historyRef.current.length - 1) return;
+    historyPos.current++;
+    applySnapshot(historyRef.current[historyPos.current]);
+  }, [applySnapshot]);
+
+  const canUndo = historyPos.current > 0;
+  const canRedo = historyPos.current < historyRef.current.length - 1;
+
+  // Push to history & save to localStorage on state change
   useEffect(() => {
-    const data = { tab, enabledTabs: [...enabledTabs], primGroups, primitives, colorGroups, colors, spacing, typography, textStyles, tsGroups, radius, borders, shadows, zindex, breakpoints, customCollections };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* quota exceeded — ignore */ }
-  }, [tab, enabledTabs, primGroups, primitives, colorGroups, colors, spacing, typography, textStyles, tsGroups, radius, borders, shadows, zindex, breakpoints, customCollections]);
+    const snap = getSnapshot();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snap)); } catch { /* quota exceeded */ }
+    if (isUndoRedo.current) { isUndoRedo.current = false; return; }
+    const h = historyRef.current;
+    // Truncate any redo states
+    if (historyPos.current < h.length - 1) h.splice(historyPos.current + 1);
+    h.push(snap);
+    if (h.length > MAX_HISTORY) h.splice(0, h.length - MAX_HISTORY);
+    historyPos.current = h.length - 1;
+  }, [getSnapshot]);
+
+  // Keyboard shortcuts: Ctrl+Z / Cmd+Z = undo, Ctrl+Shift+Z / Cmd+Shift+Z = redo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
 
   const allTabs = [...ALL_TABS, ...customCollections.map((c: any) => c.name)];
 
@@ -698,6 +755,10 @@ export default function App() {
           <div style={{fontSize:12,color:"#777",marginTop:2}}>Builds DTCG JSON for Figma native Variables + Text Styles import</div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:4,alignItems:"center"}}>
+            <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{fontSize:16,padding:"6px 10px",borderRadius:6,border:"1px solid #333",background:"#1a1a2e",color:canUndo?"#a5b4fc":"#444",cursor:canUndo?"pointer":"default",opacity:canUndo?1:0.4,lineHeight:1}}>↩</button>
+            <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" style={{fontSize:16,padding:"6px 10px",borderRadius:6,border:"1px solid #333",background:"#1a1a2e",color:canRedo?"#a5b4fc":"#444",cursor:canRedo?"pointer":"default",opacity:canRedo?1:0.4,lineHeight:1}}>↪</button>
+          </div>
           <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={handleImport} />
           {showResetConfirm ? (
             <div style={{display:"flex",alignItems:"center",gap:6,background:"#2a1a1a",border:"1px solid #7f1d1d",borderRadius:6,padding:"4px 10px"}}>
