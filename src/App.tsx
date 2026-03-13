@@ -399,38 +399,29 @@ const FONT_FAMILIES = [
   {label:"cursive", value:"cursive"},
 ];
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const inp = (extra: any={}) => ({background:"var(--bg-input)",border:"1px solid var(--border-input)",borderRadius:6,padding:"9px 12px",fontSize:13,color:"var(--text-primary)",outline:"none",boxSizing:"border-box" as const,...extra});
-const delBtn: any = {background:"none",border:"none",color:"var(--danger-text)",cursor:"pointer"};
-const dupBtn: any = {background:"none",border:"none",color:"var(--text-secondary)",cursor:"pointer",fontSize:14,padding:0,lineHeight:1,title:"Duplicate"};
-const rowBase: any = {padding:"8px 0",borderBottom:"1px solid var(--border-row)"};
-const colHdr: any = {display:"flex",alignItems:"center",gap:8,padding:"0 0 8px",borderBottom:"1px solid var(--border-section)",marginBottom:4,paddingLeft:10};
-const hdrStyle: any = {fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em",color:"var(--text-secondary)",padding:"10px 0 6px",display:"flex",alignItems:"center",gap:8};
-const tabBtnStyle = {fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--border-input)",background:"var(--bg-input)",color:"var(--text-secondary)",cursor:"pointer"} as const;
-const tabAddBtnStyle = {fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--accent)",background:"var(--bg-accent-subtle)",color:"var(--accent-text)",cursor:"pointer"} as const;
-const tabResetBtnStyle = {fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger-text)",cursor:"pointer"} as const;
+// ── Styles (CSS classes in index.css) ─────────────────────────────────────────
 
 // ── Shared components ─────────────────────────────────────────────────────────
 function AddRowBtn({ onClick, label, disabled }: any) {
-  return <button onClick={disabled ? undefined : onClick} disabled={disabled} style={{fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px dashed var(--accent)",background:"var(--bg-accent-subtle)",color:"var(--accent-text)",cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,marginTop:6,width:"100%",textAlign:"left"}}>{label}</button>;
+  return <button onClick={disabled ? undefined : onClick} disabled={disabled} className="add-row-btn">{label}</button>;
 }
 function TabHeader({ title, description, actions, search, onSearch }: any) {
   return (
-    <div style={{marginBottom:20,paddingBottom:16,borderBottom:"1px solid var(--border-section)"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-        <span style={{fontSize:15,fontWeight:600}}>{title}</span>
-        {actions && <div style={{flexShrink:0}}>{actions}</div>}
+    <div className="tab-header">
+      <div className="tab-header__top">
+        <span className="tab-header__title">{title}</span>
+        {actions && <div className="flex-shrink-0">{actions}</div>}
       </div>
-      {description && <div style={{fontSize:13,color:"var(--text-secondary)",marginTop:4}}>{description}</div>}
-      {onSearch && <div style={{marginTop:10,position:"relative"}}>
-        <input value={search||""} onChange={e=>onSearch(e.target.value)} placeholder="Filter tokens…" style={{width:"100%",background:"var(--bg-input)",border:"1px solid var(--border-input)",borderRadius:6,padding:"7px 30px 7px 12px",fontSize:12,color:"var(--text-primary)",outline:"none",boxSizing:"border-box"}} />
-        {search && <button onClick={()=>onSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"var(--text-secondary)",cursor:"pointer",fontSize:14,padding:0,lineHeight:1}}>×</button>}
+      {description && <div className="tab-header__desc">{description}</div>}
+      {onSearch && <div className="tab-header__search">
+        <input value={search||""} onChange={e=>onSearch(e.target.value)} placeholder="Filter tokens…" className="tab-header__search-input" />
+        {search && <button onClick={()=>onSearch("")} className="tab-header__search-clear">×</button>}
       </div>}
     </div>
   );
 }
 function DragHandle({ onMouseEnter, onMouseLeave }: any) {
-  return <div title="Drag to reorder" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>&#8959;</div>;
+  return <div title="Drag to reorder" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} className="drag-handle">&#8959;</div>;
 }
 function useDraggable(setList: any) {
   const dragId = useRef<any>(null), overId = useRef<any>(null);
@@ -485,13 +476,12 @@ function TextPreview({ style }: any) {
   const fullWidth = measureTextWidth(PREVIEW_TEXT, font);
   const w = Math.ceil(fullWidth / 2) + 8;
   return (
-    <div style={{overflow:"hidden",padding:"4px 0",width:"100%",maxWidth:"100%"}} onMouseDown={e=>e.stopPropagation()} onDragStart={e=>e.stopPropagation()}>
-      <span style={{fontFamily:style.fontFamily,fontSize,fontWeight:style.fontWeight,lineHeight:style.lineHeight,letterSpacing:(parseFloat(style.letterSpacing)||0)+"px",textDecoration:style.textDecoration==="UNDERLINE"?"underline":style.textDecoration==="STRIKETHROUGH"?"line-through":"none",color:"var(--text-primary)",opacity:0.9,userSelect:"text",cursor:"text",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",wordBreak:"break-word",maxWidth:w}}>{PREVIEW_TEXT}</span>
+    <div className="text-preview" onMouseDown={e=>e.stopPropagation()} onDragStart={e=>e.stopPropagation()}>
+      <span className="text-preview__text" style={{fontFamily:style.fontFamily,fontSize,fontWeight:style.fontWeight,lineHeight:style.lineHeight,letterSpacing:(parseFloat(style.letterSpacing)||0)+"px",textDecoration:style.textDecoration==="UNDERLINE"?"underline":style.textDecoration==="STRIKETHROUGH"?"line-through":"none",maxWidth:w}}>{PREVIEW_TEXT}</span>
     </div>
   );
 }
 
-const chkStyle: any = {accentColor:"#4f46e5",width:14,height:14,cursor:"pointer",flexShrink:0};
 function DraggableRow({ id, dragHandlers, children, checked, onCheck }: any) {
   const [over, setOver] = useState(false), [hov, setHov] = useState(false);
   return (
@@ -501,32 +491,32 @@ function DraggableRow({ id, dragHandlers, children, checked, onCheck }: any) {
       onDragLeave={() => setOver(false)}
       onDrop={() => { dragHandlers.onDrop(); setOver(false); }}
       onDragEnd={() => { dragHandlers.onDragEnd(); setOver(false); }}
-      style={{...rowBase,background:over?"var(--bg-drag-over)":checked?"var(--bg-selected)":"transparent",borderLeft:over?"2px solid var(--accent)":"2px solid transparent",paddingLeft:over?6:8,cursor:hov?"grab":"default",display:"flex",alignItems:"center",gap:8}}>
-      {onCheck !== undefined && <input type="checkbox" checked={!!checked} onChange={()=>onCheck(id)} style={chkStyle} />}
+      className={`draggable-row${over?" draggable-row--over":""}${checked?" draggable-row--checked":""}${hov?" draggable-row--grab":""}`}>
+      {onCheck !== undefined && <input type="checkbox" checked={!!checked} onChange={()=>onCheck(id)} className="chk" />}
       <DragHandle onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} />
-      <div style={{flex:1}}>{children}</div>
+      <div className="draggable-row__content">{children}</div>
     </div>
   );
 }
 function InlineLabel({ value, onCommit, prefix="", style={} }: any) {
   const [editing, setEditing] = useState(false), [val, setVal] = useState(value);
-  if (editing) return <input autoFocus value={val} onChange={e=>setVal(e.target.value)} onBlur={()=>setEditing(false)} onKeyDown={e=>{if(e.key==="Enter"){onCommit(val);setEditing(false);}if(e.key==="Escape")setEditing(false);}} style={{background:"var(--bg-input)",border:"1px solid var(--accent)",borderRadius:4,padding:"2px 6px",color:"var(--text-primary)",outline:"none",width:66,fontFamily:"monospace",...style}} />;
-  return <span onClick={() => { setVal(value); setEditing(true); }} title="Click to rename" style={{cursor:"pointer",borderBottom:"1px dashed var(--text-disabled)",paddingBottom:1,...style}}>{prefix}{value}</span>;
+  if (editing) return <input autoFocus value={val} onChange={e=>setVal(e.target.value)} onBlur={()=>setEditing(false)} onKeyDown={e=>{if(e.key==="Enter"){onCommit(val);setEditing(false);}if(e.key==="Escape")setEditing(false);}} className="inline-label-input" style={style} />;
+  return <span onClick={() => { setVal(value); setEditing(true); }} title="Click to rename" className="inline-label" style={style}>{prefix}{value}</span>;
 }
 function PrimSelector({ value, primitives, primGroups, onChange, mode }: any) {
   const opts = getPrimOptions(primitives, primGroups);
   const isCustom = !value.startsWith("{primitives.");
   const resolved = resolveColor(value, primitives);
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:4}}>
-      <div style={{display:"flex",alignItems:"center",gap:6}}>
-        <div style={{width:20,height:20,borderRadius:4,background:resolved,border:"1px solid var(--border-input)",flexShrink:0}} />
-        <span style={{fontSize:11,color:"var(--text-secondary)",fontFamily:"monospace"}}>{isCustom ? resolved : value.replace("{primitives.","").replace("}","")}</span>
+    <div className="prim-selector">
+      <div className="prim-selector__preview">
+        <div className="prim-selector__swatch" style={{background:resolved}} />
+        <span className="prim-selector__ref">{isCustom ? resolved : value.replace("{primitives.","").replace("}","")}</span>
       </div>
-      <select value={isCustom?"custom":value} onChange={e=>{const v=e.target.value;if(v==="custom"){onChange(resolved);}else{onChange(v);}}} style={{background:"var(--bg-input)",border:"1px solid var(--border-input)",borderRadius:6,padding:"8px 10px",fontSize:12,color:"var(--text-secondary)",outline:"none",cursor:"pointer"}}>
+      <select value={isCustom?"custom":value} onChange={e=>{const v=e.target.value;if(v==="custom"){onChange(resolved);}else{onChange(v);}}} className="prim-selector__select">
         <optgroup label={"-- "+mode+" mode --"}>{opts.map(o=><option key={o.ref} value={o.ref} style={{background:"var(--bg-input)"}}>{o.label}</option>)}</optgroup>
       </select>
-      {isCustom && <div style={{display:"flex",gap:6,alignItems:"center"}}><input type="color" value={resolved} onChange={e=>onChange(e.target.value)} style={{width:32,height:32,border:"none",background:"none",cursor:"pointer",padding:0}} /><input value={value} onChange={e=>onChange(e.target.value)} placeholder="#000000 or rgba(...)" style={{flex:1,background:"var(--bg-input)",border:"1px solid var(--border-input)",borderRadius:6,padding:"8px 10px",fontSize:12,color:"var(--text-primary)",outline:"none",fontFamily:"monospace"}} /></div>}
+      {isCustom && <div className="prim-selector__custom"><input type="color" value={resolved} onChange={e=>onChange(e.target.value)} className="prim-selector__picker" /><input value={value} onChange={e=>onChange(e.target.value)} placeholder="#000000 or rgba(...)" className="prim-selector__hex" /></div>}
     </div>
   );
 }
@@ -542,18 +532,18 @@ function parseShadow(str: string) {
 }
 function buildShadow({ x,y,blur,spread,color,inset }: any) { return (inset?"inset ":"")+x+"px "+y+"px "+blur+"px "+spread+"px "+color; }
 function ShadowSwatch({ value, active, onClick }: any) {
-  return <div onClick={onClick} style={{width:64,height:40,background:"var(--shadow-preview-bg)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,boxSizing:"border-box",border:active?"2px solid var(--accent)":"2px solid transparent"}}><div style={{width:36,height:22,borderRadius:5,background:"var(--shadow-inner-bg)",boxShadow:value}} /></div>;
+  return <div onClick={onClick} className={`shadow-swatch${active?" shadow-swatch--active":""}`}><div className="shadow-swatch__inner" style={{boxShadow:value}} /></div>;
 }
 function ShadowSlider({ label, value, min, max, onChange }: any) {
-  return <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:"var(--text-secondary)",width:52,flexShrink:0}}>{label}</span><input type="range" min={min} max={max} value={value} onChange={e=>onChange(Number(e.target.value))} style={{flex:1,accentColor:"#4f46e5",cursor:"pointer"}} /><input type="number" value={value} onChange={e=>onChange(Number(e.target.value)||0)} style={inp({width:52,padding:"4px 6px",fontSize:11,textAlign:"center",fontFamily:"monospace"})} /><span style={{fontSize:11,color:"var(--text-secondary)",width:16,flexShrink:0}}>px</span></div>;
+  return <div className="shadow-slider"><span className="shadow-slider__label">{label}</span><input type="range" min={min} max={max} value={value} onChange={e=>onChange(Number(e.target.value))} className="shadow-slider__range" /><input type="number" value={value} onChange={e=>onChange(Number(e.target.value)||0)} className="inp inp--xs inp--center inp--mono" style={{width:52}} /><span className="shadow-slider__unit">px</span></div>;
 }
 function ShadowPicker({ value, onChange }: any) {
   const p=parseShadow(value), set=(field: string,val: any)=>onChange(buildShadow({...p,[field]:val}));
-  return <div style={{display:"flex",gap:20,alignItems:"center",background:"var(--bg-sunken)",border:"1px solid var(--border-subtle)",borderRadius:10,padding:"16px 20px",margin:"4px 0 10px 0"}}><div style={{width:110,height:90,background:"var(--shadow-preview-bg)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><div style={{width:64,height:44,borderRadius:7,background:"var(--shadow-inner-bg)",boxShadow:value}} /></div><div style={{flex:1,display:"flex",flexDirection:"column",gap:9}}><ShadowSlider label="X offset" value={p.x} min={-80} max={80} onChange={(v: any)=>set("x",v)} /><ShadowSlider label="Y offset" value={p.y} min={-80} max={80} onChange={(v: any)=>set("y",v)} /><ShadowSlider label="Blur" value={p.blur} min={0} max={120} onChange={(v: any)=>set("blur",v)} /><ShadowSlider label="Spread" value={p.spread} min={-40} max={60} onChange={(v: any)=>set("spread",v)} /><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:"var(--text-secondary)",width:52,flexShrink:0}}>Color</span><input value={p.color} onChange={e=>set("color",e.target.value)} style={inp({flex:1,fontFamily:"monospace",fontSize:11,padding:"5px 8px"})} /><label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"var(--text-tertiary)",cursor:"pointer",flexShrink:0,userSelect:"none"}}><input type="checkbox" checked={p.inset} onChange={e=>set("inset",e.target.checked)} style={{accentColor:"#4f46e5"}} />inset</label></div></div></div>;
+  return <div className="shadow-picker"><div className="shadow-picker__preview"><div className="shadow-picker__inner" style={{boxShadow:value}} /></div><div className="shadow-picker__controls"><ShadowSlider label="X offset" value={p.x} min={-80} max={80} onChange={(v: any)=>set("x",v)} /><ShadowSlider label="Y offset" value={p.y} min={-80} max={80} onChange={(v: any)=>set("y",v)} /><ShadowSlider label="Blur" value={p.blur} min={0} max={120} onChange={(v: any)=>set("blur",v)} /><ShadowSlider label="Spread" value={p.spread} min={-40} max={60} onChange={(v: any)=>set("spread",v)} /><div className="shadow-picker__color-row"><span className="shadow-slider__label">Color</span><input value={p.color} onChange={e=>set("color",e.target.value)} className="inp inp--mono inp--sm" style={{flex:1}} /><label className="shadow-picker__inset"><input type="checkbox" checked={p.inset} onChange={e=>set("inset",e.target.checked)} style={{accentColor:"#4f46e5"}} />inset</label></div></div></div>;
 }
 function ShadowRow({ sh, dragHandlers, onChangeName, onChangeValue, onDelete, onDuplicate, checked, onCheck }: any) {
   const [open,setOpen]=useState(false), [hov,setHov]=useState(false);
-  return <div style={{borderBottom:"1px solid var(--border-row)"}}><div draggable onDragStart={()=>dragHandlers.onDragStart(sh.id)} onDragOver={(e: any)=>dragHandlers.onDragOver(e,sh.id)} onDrop={()=>dragHandlers.onDrop()} onDragEnd={()=>dragHandlers.onDragEnd()} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0 8px 8px",cursor:hov?"grab":"default",background:checked?"var(--bg-selected)":"transparent"}}>{onCheck !== undefined && <input type="checkbox" checked={!!checked} onChange={()=>onCheck(sh.id)} style={chkStyle} />}<DragHandle onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} /><span style={{fontSize:12,color:"var(--text-secondary)",flexShrink:0,width:72}}>shadow /</span><input value={sh.name} onChange={e=>onChangeName(e.target.value)} style={inp({width:140,flexShrink:0})} /><input value={sh.value} onChange={e=>onChangeValue(e.target.value)} style={inp({flex:1,fontFamily:"monospace",fontSize:12,minWidth:0})} /><ShadowSwatch value={sh.value} active={open} onClick={()=>setOpen((o: boolean)=>!o)} /><button onClick={onDuplicate} style={dupBtn}>⧉</button><button onClick={onDelete} style={{...delBtn,fontSize:18,flexShrink:0}}>x</button></div>{open && <ShadowPicker value={sh.value} onChange={onChangeValue} />}</div>;
+  return <div className="shadow-row"><div draggable onDragStart={()=>dragHandlers.onDragStart(sh.id)} onDragOver={(e: any)=>dragHandlers.onDragOver(e,sh.id)} onDrop={()=>dragHandlers.onDrop()} onDragEnd={()=>dragHandlers.onDragEnd()} className={`shadow-row__header${checked?" shadow-row--checked":""}${hov?" shadow-row--grab":""}`}>{onCheck !== undefined && <input type="checkbox" checked={!!checked} onChange={()=>onCheck(sh.id)} className="chk" />}<DragHandle onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} /><span className="prefix flex-shrink-0" style={{width:72}}>shadow /</span><input value={sh.name} onChange={e=>onChangeName(e.target.value)} className="inp" style={{width:140,flexShrink:0}} /><input value={sh.value} onChange={e=>onChangeValue(e.target.value)} className="inp inp--mono" style={{flex:1,fontSize:12,minWidth:0}} /><ShadowSwatch value={sh.value} active={open} onClick={()=>setOpen((o: boolean)=>!o)} /><button onClick={onDuplicate} className="dup-btn">⧉</button><button onClick={onDelete} className="del-btn" style={{fontSize:18,flexShrink:0}}>x</button></div>{open && <ShadowPicker value={sh.value} onChange={onChangeValue} />}</div>;
 }
 
 // ── Download panel ────────────────────────────────────────────────────────────
@@ -611,36 +601,34 @@ function DownloadPanel({ enabled, primGroups, primitives, colors, spacing, typog
     f.name.endsWith(".css") ? dlText(content, f.name) : dlJSON(content, f.name);
   });
 
-  const fmtBtnStyle = (active: boolean) => ({fontSize:11,padding:"5px 10px",borderRadius:5,border:"1px solid "+(active?"var(--accent)":"var(--border-input)"),background:active?"var(--accent)":"transparent",color:active?"#fff":"var(--text-secondary)",cursor:"pointer",fontWeight:active?600:400});
-
   return (
-    <div style={{background:"var(--bg-card)",border:"1px solid var(--border-subtle)",borderRadius:10,padding:16,minWidth:340,boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
-      {fmt === "dtcg" && <div style={{background:"var(--bg-sunken)",border:"1px solid var(--border-section)",borderRadius:7,padding:"10px 12px",marginBottom:12,fontSize:11,color:"var(--text-secondary)",lineHeight:1.7}}>
+    <div className="dl-panel">
+      {fmt === "dtcg" && <div className="dl-panel__info">
         <b style={{color:"var(--text-tertiary)"}}>How to import into Figma:</b><br />
         1. Open the Local Variables panel<br />
         2. Use the plugin's <b style={{color:"var(--accent-highlight)"}}>Import Variables</b> tab<br />
         3. For <b style={{color:"var(--accent-highlight)"}}>Text Styles</b>: ensure fonts are installed locally
       </div>}
-      <div style={{display:"flex",gap:4,marginBottom:12}}>
-        <button onClick={()=>{setFmt("dtcg");setChecked(new Set());}} style={fmtBtnStyle(fmt==="dtcg")}>DTCG JSON</button>
-        <button onClick={()=>{setFmt("css");setChecked(new Set());}} style={fmtBtnStyle(fmt==="css")}>CSS Variables</button>
-        <button onClick={()=>{setFmt("tailwind");setChecked(new Set());}} style={fmtBtnStyle(fmt==="tailwind")}>Tailwind</button>
+      <div className="dl-panel__fmt-row">
+        <button onClick={()=>{setFmt("dtcg");setChecked(new Set());}} className={`dl-panel__fmt-btn ${fmt==="dtcg"?"dl-panel__fmt-btn--on":"dl-panel__fmt-btn--off"}`}>DTCG JSON</button>
+        <button onClick={()=>{setFmt("css");setChecked(new Set());}} className={`dl-panel__fmt-btn ${fmt==="css"?"dl-panel__fmt-btn--on":"dl-panel__fmt-btn--off"}`}>CSS Variables</button>
+        <button onClick={()=>{setFmt("tailwind");setChecked(new Set());}} className={`dl-panel__fmt-btn ${fmt==="tailwind"?"dl-panel__fmt-btn--on":"dl-panel__fmt-btn--off"}`}>Tailwind</button>
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"7px 8px",marginBottom:4,borderRadius:6,background:"var(--bg-sunken)",border:"1px solid var(--border-section)"}}>
-        <input type="checkbox" checked={allChecked} onChange={toggleAll} style={{accentColor:"#4f46e5",width:14,height:14,cursor:"pointer",flexShrink:0}} />
+      <div className="dl-panel__select-all">
+        <input type="checkbox" checked={allChecked} onChange={toggleAll} className="chk" />
         <span style={{fontSize:12,color:"var(--text-tertiary)",flex:1}}>{allChecked ? "Deselect all" : "Select all"}</span>
-        <span style={{fontSize:11,color:"var(--text-secondary)"}}>{checked.size} / {allFiles.length} selected</span>
+        <span className="text-xs text-secondary">{checked.size} / {allFiles.length} selected</span>
       </div>
-      <div style={{display:"flex",flexDirection:"column",gap:2,marginBottom:12}}>
+      <div className="dl-panel__list">
         {allFiles.map(f => (
-          <label key={f.name} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 8px",borderRadius:6,cursor:"pointer",background:checked.has(f.name)?"var(--bg-selected)":"transparent"}}>
-            <input type="checkbox" checked={checked.has(f.name)} onChange={() => toggle(f.name)} style={{accentColor:"#4f46e5",width:14,height:14,cursor:"pointer",flexShrink:0}} />
-            <span style={{fontSize:12,color:checked.has(f.name)?"var(--text-muted)":"var(--text-disabled)",fontFamily:"monospace",flex:1}}>{f.label}</span>
-            <span style={{fontSize:11,color:"var(--text-disabled)"}}>{f.tab}</span>
+          <label key={f.name} className={`dl-panel__file${checked.has(f.name)?" dl-panel__file--checked":""}`}>
+            <input type="checkbox" checked={checked.has(f.name)} onChange={() => toggle(f.name)} className="chk" />
+            <span className={`dl-panel__file-name ${checked.has(f.name)?"dl-panel__file-name--on":"dl-panel__file-name--off"}`}>{f.label}</span>
+            <span className="dl-panel__file-tab">{f.tab}</span>
           </label>
         ))}
       </div>
-      <button onClick={downloadSelected} disabled={checked.size===0} style={{width:"100%",padding:"9px 0",borderRadius:7,border:"none",background:checked.size===0?"var(--bg-input)":"var(--accent)",color:checked.size===0?"var(--text-disabled)":"#fff",fontWeight:600,fontSize:13,cursor:checked.size===0?"not-allowed":"pointer"}}>
+      <button onClick={downloadSelected} disabled={checked.size===0} className={`dl-panel__dl-btn ${checked.size===0?"dl-panel__dl-btn--off":"dl-panel__dl-btn--on"}`}>
         ↓ Download {checked.size} file{checked.size!==1?"s":""}
       </button>
     </div>
@@ -690,7 +678,7 @@ export default function App() {
   }), []);
   const selectAllChk = (ids: number[]) => {
     const all = ids.length > 0 && ids.every(id => selected.has(id));
-    return <input type="checkbox" checked={all} onChange={() => toggleSelectAll(ids)} style={chkStyle} />;
+    return <input type="checkbox" checked={all} onChange={() => toggleSelectAll(ids)} className="chk" />;
   };
 
   // ── Undo / Redo ──────────────────────────────────────────────────────────────
@@ -1025,48 +1013,48 @@ export default function App() {
     setTabResetConfirm(false);
   };
 
-  const tabActionBtns = <>{importError && <span style={{fontSize:12,color:"var(--danger-text)"}}>{importError}</span>}
-    <button onClick={()=>fileRef.current.click()} style={tabBtnStyle}>Import JSON</button>
-    <button onClick={()=>setShowPreview(v=>!v)} style={tabBtnStyle}>{showPreview?"Hide Preview":"Preview JSON"}</button>
-    <button onClick={copy} style={tabBtnStyle}>{copied?"Copied!":"Copy JSON"}</button>
+  const tabActionBtns = <>{importError && <span className="error-msg">{importError}</span>}
+    <button onClick={()=>fileRef.current.click()} className="tab-btn">Import JSON</button>
+    <button onClick={()=>setShowPreview(v=>!v)} className="tab-btn">{showPreview?"Hide Preview":"Preview JSON"}</button>
+    <button onClick={copy} className="tab-btn">{copied?"Copied!":"Copy JSON"}</button>
     {tabResetConfirm ? <>
-      <span style={{fontSize:12,color:"var(--danger-text)"}}>Reset {tab}?</span>
-      <button onClick={resetTab} style={{fontSize:12,padding:"6px 12px",borderRadius:6,border:"none",background:"var(--danger-btn)",color:"#fff",cursor:"pointer",fontWeight:600}}>Yes</button>
-      <button onClick={()=>setTabResetConfirm(false)} style={tabBtnStyle}>Cancel</button>
-    </> : <button onClick={()=>setTabResetConfirm(true)} style={tabResetBtnStyle}>Reset</button>}
+      <span className="error-msg">Reset {tab}?</span>
+      <button onClick={resetTab} className="danger-confirm-btn">Yes</button>
+      <button onClick={()=>setTabResetConfirm(false)} className="tab-btn">Cancel</button>
+    </> : <button onClick={()=>setTabResetConfirm(true)} className="tab-reset-btn">Reset</button>}
   </>;
-  const tabActions = (extra?: any) => <div style={{display:"flex",gap:8,alignItems:"center"}}>{tabActionBtns}{extra}</div>;
+  const tabActions = (extra?: any) => <div className="tab-actions">{tabActionBtns}{extra}</div>;
 
   return (
-    <div style={{fontFamily:"Inter,system-ui,sans-serif",background:"var(--bg-page)",minHeight:"100vh",color:"var(--text-primary)",display:"flex",flexDirection:"column",width:"100%",boxSizing:"border-box",overflow:"hidden"}}>
+    <div className="app">
 
       {/* Header */}
-      <div style={{background:"var(--bg-card)",borderBottom:"1px solid var(--border-struct)",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+      <div className="app-header">
         <div>
-          <div style={{fontSize:16,fontWeight:600}}>Figma Variables Generator</div>
-          <div style={{fontSize:12,color:"var(--text-secondary)",marginTop:2}}>Builds DTCG JSON for Figma native Variables + Text Styles import</div>
+          <div className="app-header__title">Figma Variables Generator</div>
+          <div className="app-header__subtitle">Builds DTCG JSON for Figma native Variables + Text Styles import</div>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-          <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} style={{fontSize:16,padding:"6px 10px",borderRadius:6,border:"1px solid var(--border-input)",background:"var(--bg-input)",color:"var(--text-secondary)",cursor:"pointer",lineHeight:1}}>{theme === "dark" ? "\u2600" : "\u263E"}</button>
-            <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{fontSize:16,padding:"6px 10px",borderRadius:6,border:"1px solid var(--border-input)",background:"var(--bg-input)",color:canUndo?"var(--accent-text)":"var(--text-disabled)",cursor:canUndo?"pointer":"default",opacity:canUndo?1:0.4,lineHeight:1}}>↩</button>
-            <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" style={{fontSize:16,padding:"6px 10px",borderRadius:6,border:"1px solid var(--border-input)",background:"var(--bg-input)",color:canRedo?"var(--accent-text)":"var(--text-disabled)",cursor:canRedo?"pointer":"default",opacity:canRedo?1:0.4,lineHeight:1}}>↪</button>
+        <div className="app-header__actions">
+          <div className="app-header__icon-group">
+            <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} className="icon-btn icon-btn--enabled">{theme === "dark" ? "\u2600" : "\u263E"}</button>
+            <button onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)" className={`icon-btn ${canUndo?"icon-btn--enabled":"icon-btn--disabled"}`}>↩</button>
+            <button onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" className={`icon-btn ${canRedo?"icon-btn--enabled":"icon-btn--disabled"}`}>↪</button>
           </div>
           <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={handleImport} />
           {showResetConfirm ? (
-            <div style={{display:"flex",alignItems:"center",gap:6,background:"var(--danger-alert-bg)",border:"1px solid var(--danger-border)",borderRadius:6,padding:"4px 10px"}}>
-              <span style={{fontSize:12,color:"var(--danger-text)"}}>Reset everything?</span>
-              <button onClick={handleReset} style={{fontSize:12,padding:"5px 10px",borderRadius:5,border:"none",background:"var(--danger-btn)",color:"#fff",cursor:"pointer",fontWeight:600}}>Yes, reset</button>
-              <button onClick={()=>setShowResetConfirm(false)} style={{fontSize:12,padding:"5px 10px",borderRadius:5,border:"1px solid var(--border-input)",background:"transparent",color:"var(--text-muted)",cursor:"pointer"}}>Cancel</button>
+            <div className="reset-confirm">
+              <span className="reset-confirm__text">Reset everything?</span>
+              <button onClick={handleReset} className="reset-confirm__yes">Yes, reset</button>
+              <button onClick={()=>setShowResetConfirm(false)} className="reset-confirm__cancel">Cancel</button>
             </div>
           ) : (
-            <button onClick={()=>setShowResetConfirm(true)} style={{fontSize:13,padding:"8px 14px",borderRadius:6,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger-text)",cursor:"pointer"}}>Reset</button>
+            <button onClick={()=>setShowResetConfirm(true)} className="global-reset-btn">Reset</button>
           )}
-          <div style={{position:"relative"}}>
-            <button onClick={()=>setShowDl(v=>!v)} style={{fontSize:13,padding:"8px 14px",borderRadius:6,border:"1px solid var(--border-input)",background:"var(--bg-input)",color:"var(--text-secondary)",cursor:"pointer"}}>Download Files {showDl?"▴":"▾"}</button>
+          <div className="dl-trigger">
+            <button onClick={()=>setShowDl(v=>!v)} className="dl-trigger__btn">Download Files {showDl?"▴":"▾"}</button>
             {showDl && (
-              <div style={{position:"absolute",top:"calc(100% + 4px)",right:0,zIndex:200}}>
-                <div onClick={()=>setShowDl(false)} style={{position:"fixed",inset:0,zIndex:-1}} />
+              <div className="dl-dropdown">
+                <div onClick={()=>setShowDl(false)} className="dl-backdrop" />
                 <DownloadPanel enabled={enabledTabs} primGroups={primGroups} primitives={primitives} colors={colors} spacing={spacing} typography={typography} textStyles={textStyles} radius={radius} borders={borders} shadows={shadows} zindex={zindex} breakpoints={breakpoints} customCollections={customCollections} />
               </div>
             )}
@@ -1074,14 +1062,14 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{display:"flex",flex:1,overflow:"hidden",width:"100%"}}>
+      <div className="app-body">
 
         {/* Sidebar */}
-        <div style={{width:160,background:"var(--bg-card)",borderRight:"1px solid var(--border-struct)",paddingTop:12,flexShrink:0,display:"flex",flexDirection:"column"}}>
+        <div className="sidebar">
           {allTabs.map(t => {
             const enabled=enabledTabs.has(t), active=tab===t;
             return (
-              <div key={t} style={{display:"flex",alignItems:"center"}}>
+              <div key={t} className="sidebar__tab-row">
                 <button onClick={()=>{
                   // Auto-save unsaved custom collection/group settings when switching away
                   const curr = customCollections.find(c => c.name === tab);
@@ -1091,56 +1079,56 @@ export default function App() {
                     if (unlocked) setCustomCollections(ccs => ccs.map(c => c.id !== curr.id ? c : { ...c, groups: c.groups.map((gr: any) => ({ ...gr, locked: true })) }));
                   }
                   setTab(t);setTabResetConfirm(false);setSelected(new Set());setSearch("");
-                }} style={{flex:1,textAlign:"left",padding:"10px 14px",fontSize:13,fontWeight:active?600:400,cursor:"pointer",border:"none",background:active?"var(--accent)":"transparent",color:active?"#fff":enabled?"var(--text-secondary)":"var(--text-disabled)",transition:"all 0.15s"}}>{t}</button>
-                <div onClick={()=>toggleTab(t)} title={enabled?"Exclude from export":"Include in export"} style={{width:36,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,paddingRight:10,paddingLeft:4,alignSelf:"stretch"}}>
-                  <div style={{width:24,height:14,borderRadius:9999,background:enabled?"var(--accent)":"var(--toggle-off-bg)",border:"1px solid "+(enabled?"var(--accent)":"var(--text-disabled)"),position:"relative"}}>
-                    <div style={{position:"absolute",top:2,left:enabled?10:2,width:9,height:9,borderRadius:"50%",background:enabled?"var(--toggle-on-knob)":"var(--toggle-off-knob)",transition:"left 0.2s"}} />
+                }} className={`sidebar__tab ${active?"sidebar__tab--active":enabled?"sidebar__tab--on":"sidebar__tab--off"}`}>{t}</button>
+                <div onClick={()=>toggleTab(t)} title={enabled?"Exclude from export":"Include in export"} className="sidebar__toggle-wrap">
+                  <div className={`sidebar__toggle ${enabled?"sidebar__toggle--on":"sidebar__toggle--off"}`}>
+                    <div className={`sidebar__knob ${enabled?"sidebar__knob--on":"sidebar__knob--off"}`} />
                   </div>
                 </div>
               </div>
             );
           })}
-          <button onClick={addCustomCollection} style={{margin:"8px 14px",padding:"8px 0",fontSize:12,borderRadius:6,border:"1px dashed var(--accent)",background:"var(--bg-accent-subtle)",color:"var(--accent-text)",cursor:"pointer"}}>+ Add Collection</button>
+          <button onClick={addCustomCollection} className="sidebar__add-btn">+ Add Collection</button>
         </div>
 
         {/* Content */}
-        <div style={{flex:1,overflowX:"hidden",overflowY:"auto",padding:28,minWidth:0,boxSizing:"border-box"}}>
+        <div className="content">
 
           {/* PRIMITIVES */}
           {tab==="Primitives" && (
             <div>
               <TabHeader title="Primitive Colors" description="Raw palette. Click a name to rename. Never apply directly to layers."
-                actions={tabActions(<button onClick={addPrimGroup} style={tabAddBtnStyle}>+ Add Palette</button>)} search={search} onSearch={setSearch} />
+                actions={tabActions(<button onClick={addPrimGroup} className="tab-add-btn">+ Add Palette</button>)} search={search} onSearch={setSearch} />
               {primGroups.filter((g: any) => matchesSearch(search, g.label, g.key, ...g.shades)).map((g: any) => (
-                <div key={g.id} {...primGroupDrag.makeDropZone(String(g.id))} style={{marginBottom:32}}>
-                  <div style={hdrStyle}><div draggable onDragStart={e=>primGroupDrag.onDragStart(e,String(g.id))} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div><InlineLabel value={g.label} prefix="primitives / " onCommit={(nl: string)=>renamePrimGroup(g.key,nl)} /><div style={{flex:1,height:1,background:"var(--border-section)"}} /><button onClick={()=>deletePrimGroup(g.key)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete palette</button></div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:12,alignItems:"flex-start"}}>
+                <div key={g.id} {...primGroupDrag.makeDropZone(String(g.id))} className="mb-32">
+                  <div className="hdr-style"><div draggable onDragStart={e=>primGroupDrag.onDragStart(e,String(g.id))} className="drag-handle">⌿</div><InlineLabel value={g.label} prefix="primitives / " onCommit={(nl: string)=>renamePrimGroup(g.key,nl)} /><div className="section-divider" /><button onClick={()=>deletePrimGroup(g.key)} className="del-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>x delete palette</button></div>
+                  <div className="prim-shades">
                     {g.shades.map((shade: string) => (
-                      <div key={shade} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                        <div style={{position:"relative",width:56,height:56}}>
-                          <div style={{width:56,height:56,borderRadius:10,background:primitives[g.key]?.[shade]||"#808080",border:"1px solid var(--border-input)"}} />
-                          <input type="color" value={primitives[g.key]?.[shade]||"#808080"} onChange={e=>setPrimitives((p: any)=>({...p,[g.key]:{...p[g.key],[shade]:e.target.value}}))} style={{position:"absolute",inset:0,opacity:0,width:"100%",height:"100%",cursor:"pointer"}} />
+                      <div key={shade} className="prim-shade">
+                        <div className="prim-swatch-wrap">
+                          <div className="prim-swatch" style={{background:primitives[g.key]?.[shade]||"#808080"}} />
+                          <input type="color" value={primitives[g.key]?.[shade]||"#808080"} onChange={e=>setPrimitives((p: any)=>({...p,[g.key]:{...p[g.key],[shade]:e.target.value}}))} className="prim-color-input" />
                         </div>
                         <InlineLabel value={shade} onCommit={(ns: string)=>renameShade(g.key,shade,ns)} style={{fontSize:11,color:"var(--text-secondary)",textAlign:"center"}} />
-                        <input value={primitives[g.key]?.[shade]||""} onChange={e=>setPrimitives((p: any)=>({...p,[g.key]:{...p[g.key],[shade]:e.target.value}}))} style={{width:66,background:"var(--bg-input)",border:"1px solid var(--border-input)",borderRadius:4,padding:"4px 5px",fontSize:10,color:"var(--text-muted)",textAlign:"center",outline:"none",fontFamily:"monospace"}} />
-                        <button onClick={()=>removeShade(g.key,shade)} style={{...delBtn,fontSize:11,padding:0,lineHeight:1}}>x</button>
+                        <input value={primitives[g.key]?.[shade]||""} onChange={e=>setPrimitives((p: any)=>({...p,[g.key]:{...p[g.key],[shade]:e.target.value}}))} className="prim-hex" />
+                        <button onClick={()=>removeShade(g.key,shade)} className="del-btn" style={{fontSize:11,padding:0,lineHeight:1}}>x</button>
                       </div>
                     ))}
-                    <div style={{display:"flex",alignItems:"center",height:56}}><button onClick={()=>addShade(g.key)} style={{height:56,width:40,borderRadius:10,border:"1px dashed var(--border-input)",background:"transparent",color:"var(--text-secondary)",cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button></div>
+                    <div style={{display:"flex",alignItems:"center",height:56}}><button onClick={()=>addShade(g.key)} className="prim-add-shade">+</button></div>
                   </div>
                 </div>
               ))}
-              <div style={{marginBottom:28}}>
-                <div style={hdrStyle}><span>primitives / Base</span><div style={{flex:1,height:1,background:"var(--border-section)"}} /></div>
+              <div className="mb-28">
+                <div className="hdr-style"><span>primitives / Base</span><div className="section-divider" /></div>
                 <div style={{display:"flex",gap:12}}>
                   {["white","black"].map(k => (
-                    <div key={k} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                      <div style={{position:"relative",width:56,height:56}}>
-                        <div style={{width:56,height:56,borderRadius:10,background:primitives.base?.[k]||"#000",border:"1px solid var(--border-input)"}} />
-                        <input type="color" value={primitives.base?.[k]||"#000000"} onChange={e=>setPrimitives((p: any)=>({...p,base:{...p.base,[k]:e.target.value}}))} style={{position:"absolute",inset:0,opacity:0,width:"100%",height:"100%",cursor:"pointer"}} />
+                    <div key={k} className="prim-shade">
+                      <div className="prim-swatch-wrap">
+                        <div className="prim-swatch" style={{background:primitives.base?.[k]||"#000"}} />
+                        <input type="color" value={primitives.base?.[k]||"#000000"} onChange={e=>setPrimitives((p: any)=>({...p,base:{...p.base,[k]:e.target.value}}))} className="prim-color-input" />
                       </div>
-                      <div style={{fontSize:11,color:"var(--text-secondary)"}}>{k}</div>
-                      <input value={primitives.base?.[k]||""} onChange={e=>setPrimitives((p: any)=>({...p,base:{...p.base,[k]:e.target.value}}))} style={{width:66,background:"var(--bg-input)",border:"1px solid var(--border-input)",borderRadius:4,padding:"4px 5px",fontSize:10,color:"var(--text-muted)",textAlign:"center",outline:"none",fontFamily:"monospace"}} />
+                      <div className="text-xs text-secondary">{k}</div>
+                      <input value={primitives.base?.[k]||""} onChange={e=>setPrimitives((p: any)=>({...p,base:{...p.base,[k]:e.target.value}}))} className="prim-hex" />
                     </div>
                   ))}
                 </div>
@@ -1152,31 +1140,31 @@ export default function App() {
           {tab==="Colors" && (
             <div>
               <TabHeader title="Semantic Color Tokens" description="Downloads as two files: colors-light.json and colors-dark.json."
-                actions={tabActions(<button onClick={addColorGroup} style={tabAddBtnStyle}>+ Add Group</button>)} search={search} onSearch={setSearch} />
+                actions={tabActions(<button onClick={addColorGroup} className="tab-add-btn">+ Add Group</button>)} search={search} onSearch={setSearch} />
               {colorGroups.map((g: string) => {
                 const filtered = groupedColors[g].filter((c: any) => matchesSearch(search, g, c.name, c.description, c.light, c.dark));
                 if (search && filtered.length === 0) return null;
                 return (
-                <div key={g} {...colorGroupDrag.makeDropZone(g)} style={{marginBottom:28}}>
-                  <div style={hdrStyle}><div draggable onDragStart={e=>colorGroupDrag.onDragStart(e,g)} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div><InlineLabel value={g} prefix="color / " onCommit={(n: string)=>renameColorGroup(g,n)} /><div style={{flex:1,height:1,background:"var(--border-section)"}} /><button onClick={()=>{const nn=g+" copy";setColorGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setColors(c=>[...c,...c.filter(i=>i.group===g).map(i=>({...i,id:uid(),group:nn}))]);}} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteColorGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button></div>
-                  {filtered.length===0 && <div style={{fontSize:12,color:"var(--text-secondary)",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
+                <div key={g} {...colorGroupDrag.makeDropZone(g)} className="mb-28">
+                  <div className="hdr-style"><div draggable onDragStart={e=>colorGroupDrag.onDragStart(e,g)} className="drag-handle">⌿</div><InlineLabel value={g} prefix="color / " onCommit={(n: string)=>renameColorGroup(g,n)} /><div className="section-divider" /><button onClick={()=>{const nn=g+" copy";setColorGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setColors(c=>[...c,...c.filter(i=>i.group===g).map(i=>({...i,id:uid(),group:nn}))]);}} className="dup-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteColorGroup(g)} className="del-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button></div>
+                  {filtered.length===0 && <div className="empty-msg">No tokens yet.</div>}
                   {filtered.length > 0 && (
                     <div>
-                      <div style={colHdr}>
+                      <div className="col-hdr">
                         {selectAllChk(filtered.map((c: any)=>c.id))}
-                        <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                        <div style={{flex:1,display:"grid",gridTemplateColumns:"110px 150px 1fr 1fr 32px",gap:10}}>
-                        {["Group","Name","Light","Dark",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                        <div className="drag-handle drag-handle--hidden">⌿</div>
+                        <div className="flex-1 grid-row grid-colors">
+                        {["Group","Name","Light","Dark",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
                         </div>
                       </div>
                       {filtered.map((c: any) => (
                         <DraggableRow key={c.id} id={c.id} dragHandlers={colorDrag} checked={selected.has(c.id)} onCheck={toggleSelect}>
-                          <div style={{display:"grid",gridTemplateColumns:"110px 150px 1fr 1fr 32px",gap:10,alignItems:"start"}}>
-                            <select value={c.group} onChange={e=>updateColor(c.id,"group",e.target.value)} style={inp({width:"100%"})}>{colorGroups.map((g2: string)=><option key={g2}>{g2}</option>)}</select>
-                            <div><input value={c.name} onChange={e=>updateColor(c.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} /><input value={c.description} onChange={e=>updateColor(c.id,"description",e.target.value)} placeholder="Description" style={inp({width:"100%",boxSizing:"border-box",marginTop:6,fontSize:11,color:"var(--text-secondary)",padding:"6px 10px",border:"1px solid var(--border-section)"})} /></div>
+                          <div className="grid-row grid-colors" style={{alignItems:"start"}}>
+                            <select value={c.group} onChange={e=>updateColor(c.id,"group",e.target.value)} className="inp inp--full">{colorGroups.map((g2: string)=><option key={g2}>{g2}</option>)}</select>
+                            <div><input value={c.name} onChange={e=>updateColor(c.id,"name",e.target.value)} className="inp inp--full" /><input value={c.description} onChange={e=>updateColor(c.id,"description",e.target.value)} placeholder="Description" className="inp inp--full inp--desc" /></div>
                             <PrimSelector value={c.light} primitives={primitives} primGroups={primGroups} onChange={(v: string)=>updateColor(c.id,"light",v)} mode="Light" />
                             <PrimSelector value={c.dark}  primitives={primitives} primGroups={primGroups} onChange={(v: string)=>updateColor(c.id,"dark",v)}  mode="Dark" />
-                            <div style={{display:"flex",gap:2,paddingTop:8}}><button onClick={()=>dupColor(c.id)} style={dupBtn}>⧉</button><button onClick={()=>setColors((c2: any[])=>c2.filter(i=>i.id!==c.id))} style={{...delBtn,fontSize:18}}>x</button></div>
+                            <div className="btn-group" style={{paddingTop:8}}><button onClick={()=>dupColor(c.id)} className="dup-btn">⧉</button><button onClick={()=>setColors((c2: any[])=>c2.filter(i=>i.id!==c.id))} className="del-btn" style={{fontSize:18}}>x</button></div>
                           </div>
                         </DraggableRow>
                       ))}
@@ -1192,21 +1180,21 @@ export default function App() {
           {tab==="Spacing" && (
             <div>
               <TabHeader title="Spacing Tokens" description="4px base scale. Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div style={colHdr}>
+              <div className="col-hdr">
                 {selectAllChk(spacing.map((s: any)=>s.id))}
-                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                <div style={{flex:1,display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10}}>
-                {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                <div className="drag-handle drag-handle--hidden">⌿</div>
+                <div className="flex-1 grid-row grid-spacing">
+                {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
                 </div>
               </div>
               {spacing.filter((sp: any) => matchesSearch(search, sp.name, sp.value)).map((sp: any) => (
                 <DraggableRow key={sp.id} id={sp.id} dragHandlers={spacingDrag} checked={selected.has(sp.id)} onCheck={toggleSelect}>
-                  <div style={{display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
-                    <span style={{fontSize:12,color:"var(--text-secondary)"}}>spacing /</span>
-                    <input value={sp.name} onChange={e=>updateList(setSpacing,sp.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
-                    <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={sp.value} onChange={e=>updateList(setSpacing,sp.id,"value",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"var(--text-secondary)"}}>px</span></div>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{height:14,background:"#4f46e5",borderRadius:3,opacity:0.7,width:Math.min(parseInt(sp.value)||0,220)+"px",minWidth:2}} /><span style={{fontSize:12,color:"var(--text-secondary)"}}>{sp.value}px</span></div>
-                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setSpacing,sp.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setSpacing,sp.id)} style={{...delBtn,fontSize:18}}>x</button></div>
+                  <div className="grid-row grid-spacing">
+                    <span className="prefix">spacing /</span>
+                    <input value={sp.name} onChange={e=>updateList(setSpacing,sp.id,"name",e.target.value)} className="inp inp--full" />
+                    <div className="flex-row"><input value={sp.value} onChange={e=>updateList(setSpacing,sp.id,"value",e.target.value)} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
+                    <div className="flex-row gap-8"><div className="spacing-bar" style={{width:Math.min(parseInt(sp.value)||0,220)+"px"}} /><span className="prefix">{sp.value}px</span></div>
+                    <div className="btn-group"><button onClick={()=>dupInList(setSpacing,sp.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setSpacing,sp.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
               ))}
@@ -1219,28 +1207,28 @@ export default function App() {
             <div>
               <TabHeader title="Typography Tokens" description="Font families, sizes, weights and line heights. For composite text styles, use the Text Styles tab." actions={tabActions()} search={search} onSearch={setSearch} />
               {[["families","font / family",""],["sizes","font / size","px"],["weights","font / weight",""],["lineHeights","font / line-height",""]].map(([key,label,unit]) => (
-                <div key={key} style={{marginBottom:28}}>
-                  <div style={{marginBottom:8}}><span style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em",color:"var(--text-secondary)"}}>{label} — drag to reorder</span></div>
-                  <div style={colHdr}>
+                <div key={key} className="mb-28">
+                  <div style={{marginBottom:8}}><span className="col-hdr-label" style={{fontSize:12,letterSpacing:"0.07em"}}>{label} — drag to reorder</span></div>
+                  <div className="col-hdr">
                     {selectAllChk((typography as any)[key].map((i: any)=>i.id))}
-                    <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                    <div style={{flex:1,display:"grid",gridTemplateColumns:"180px 1fr 32px",gap:10}}>
-                    {["Name","Value",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                    <div className="drag-handle drag-handle--hidden">⌿</div>
+                    <div className="flex-1 grid-row grid-typo">
+                    {["Name","Value",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
                     </div>
                   </div>
                   {(typography as any)[key].filter((item: any) => matchesSearch(search, item.name, item.value)).map((item: any) => (
                     <DraggableRow key={item.id} id={item.id} dragHandlers={typoDragMap[key]} checked={selected.has(item.id)} onCheck={toggleSelect}>
-                      <div style={{display:"grid",gridTemplateColumns:"180px 1fr 32px",gap:10,alignItems:"center"}}>
-                        <input value={item.name} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,name:e.target.value}:i)}))} style={inp()} />
-                        <div style={{display:"flex",gap:6,alignItems:"center"}}>{key==="families" ? (
-                          <select value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} style={inp({width:"100%",fontSize:11,padding:"8px 6px",fontFamily:item.value})}>
+                      <div className="grid-row grid-typo">
+                        <input value={item.name} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,name:e.target.value}:i)}))} className="inp" />
+                        <div className="flex-row">{key==="families" ? (
+                          <select value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} className="inp inp--full inp--sm" style={{fontFamily:item.value}}>
                             {FONT_FAMILIES.map(f=><option key={f.value} value={f.value} style={{fontFamily:f.value}}>{f.label}</option>)}
                             {!FONT_FAMILIES.some(f=>f.value===item.value) && <option value={item.value}>{item.value}</option>}
                           </select>
                         ) : (
-                          <input value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} />
-                        )}{unit && <span style={{fontSize:12,color:"var(--text-secondary)",flexShrink:0}}>{unit}</span>}</div>
-                        <div style={{display:"flex",gap:2}}><button onClick={()=>setTypography((t: any)=>{const arr=[...t[key]];const idx=arr.findIndex((i: any)=>i.id===item.id);if(idx<0)return t;arr.splice(idx+1,0,{...arr[idx],id:uid(),name:arr[idx].name+" copy"});return{...t,[key]:arr};})} style={dupBtn}>⧉</button><button onClick={()=>setTypography((t: any)=>({...t,[key]:t[key].filter((i: any)=>i.id!==item.id)}))} style={{...delBtn,fontSize:18}}>x</button></div>
+                          <input value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} className="inp inp--full inp--mono" />
+                        )}{unit && <span className="unit">{unit}</span>}</div>
+                        <div className="btn-group"><button onClick={()=>setTypography((t: any)=>{const arr=[...t[key]];const idx=arr.findIndex((i: any)=>i.id===item.id);if(idx<0)return t;arr.splice(idx+1,0,{...arr[idx],id:uid(),name:arr[idx].name+" copy"});return{...t,[key]:arr};})} className="dup-btn">⧉</button><button onClick={()=>setTypography((t: any)=>({...t,[key]:t[key].filter((i: any)=>i.id!==item.id)}))} className="del-btn" style={{fontSize:18}}>x</button></div>
                       </div>
                     </DraggableRow>
                   ))}
@@ -1255,65 +1243,65 @@ export default function App() {
             <div>
               <TabHeader title="Text Styles"
                 description="Composite typography styles — each defines a full font stack. Exports as text-styles.json for the plugin importer."
-                actions={tabActions(<button onClick={addTsGroup} style={tabAddBtnStyle}>+ Add Group</button>)} search={search} onSearch={setSearch} />
+                actions={tabActions(<button onClick={addTsGroup} className="tab-add-btn">+ Add Group</button>)} search={search} onSearch={setSearch} />
 
               {tsGroups.map((g: string) => {
                 const filteredTs = (groupedTextStyles[g]||[]).filter((s: any) => matchesSearch(search, g, s.name, s.fontFamily, s.fontSize, s.fontWeight));
                 if (search && filteredTs.length === 0) return null;
                 return (
-                <div key={g} {...tsGroupDrag.makeDropZone(g)} style={{marginBottom:32}}>
-                  <div style={hdrStyle}>
-                    <div draggable onDragStart={e=>tsGroupDrag.onDragStart(e,g)} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div>
+                <div key={g} {...tsGroupDrag.makeDropZone(g)} className="mb-32">
+                  <div className="hdr-style">
+                    <div draggable onDragStart={e=>tsGroupDrag.onDragStart(e,g)} className="drag-handle">⌿</div>
                     <InlineLabel value={g} prefix="text / " onCommit={(n: string)=>renameTsGroup(g,n)} />
-                    <div style={{flex:1,height:1,background:"var(--border-section)"}} />
-                    <button onClick={()=>{const nn=g+" copy";setTsGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setTextStyles(ts=>[...ts,...ts.filter(s=>s.group===g).map(s=>({...s,id:uid(),group:nn,name:s.name+" copy"}))]);}} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteTsGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
+                    <div className="section-divider" />
+                    <button onClick={()=>{const nn=g+" copy";setTsGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setTextStyles(ts=>[...ts,...ts.filter(s=>s.group===g).map(s=>({...s,id:uid(),group:nn,name:s.name+" copy"}))]);}} className="dup-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteTsGroup(g)} className="del-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
                   </div>
 
                   {/* Column headers */}
-                  <div style={colHdr}>
+                  <div className="col-hdr">
                     {selectAllChk(filteredTs.map((s: any)=>s.id))}
-                    <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                    <div style={{flex:1,display:"grid",gridTemplateColumns:"80px minmax(70px,130px) 55px 56px 100px 110px 140px 100px 1fr 32px",gap:6}}>
-                    {["Name","Font Family","Size (px)","Weight","Line Height (em)","Letter Spacing (%)","Paragraph Spacing (px)","Decoration","Preview",""].map((h,i)=><div key={i} style={{fontSize:10,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",whiteSpace:"nowrap"}}>{h}</div>)}
+                    <div className="drag-handle drag-handle--hidden">⌿</div>
+                    <div className="flex-1 grid-row grid-ts">
+                    {["Name","Font Family","Size (px)","Weight","Line Height (em)","Letter Spacing (%)","Paragraph Spacing (px)","Decoration","Preview",""].map((h,i)=><div key={i} className="col-hdr-label col-hdr-label--nowrap">{h}</div>)}
                     </div>
                   </div>
 
                   {filteredTs.map((s: any) => (
                     <DraggableRow key={s.id} id={s.id} dragHandlers={textStylesDrag} checked={selected.has(s.id)} onCheck={toggleSelect}>
-                      <div style={{display:"grid",gridTemplateColumns:"80px minmax(70px,130px) 55px 56px 100px 110px 140px 100px 1fr 32px",gap:6,alignItems:"center"}}>
+                      <div className="grid-row grid-ts">
 
                         {/* Name */}
-                        <input value={s.name} onChange={e=>updateTextStyle(s.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
+                        <input value={s.name} onChange={e=>updateTextStyle(s.id,"name",e.target.value)} className="inp inp--full" />
 
                         {/* Font family */}
-                        <select value={s.fontFamily} onChange={e=>updateTextStyle(s.id,"fontFamily",e.target.value)} style={inp({width:"100%",fontSize:11,padding:"8px 6px",fontFamily:s.fontFamily})}>
+                        <select value={s.fontFamily} onChange={e=>updateTextStyle(s.id,"fontFamily",e.target.value)} className="inp inp--full inp--sm" style={{fontFamily:s.fontFamily}}>
                           {FONT_FAMILIES.map(f=><option key={f.value} value={f.value} style={{fontFamily:f.value}}>{f.label}</option>)}
                           {!FONT_FAMILIES.some(f=>f.value===s.fontFamily) && <option value={s.fontFamily}>{s.fontFamily}</option>}
                         </select>
 
                         {/* Font size */}
-                        <div style={{display:"flex",gap:3,alignItems:"center"}}>
-                          <input value={s.fontSize} onChange={e=>updateTextStyle(s.id,"fontSize",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace",fontSize:11})} />
+                        <div className="flex-row">
+                          <input value={s.fontSize} onChange={e=>updateTextStyle(s.id,"fontSize",e.target.value)} className="inp inp--full inp--mono inp--sm" />
                         </div>
 
                         {/* Font weight */}
-                        <input value={s.fontWeight} onChange={e=>updateTextStyle(s.id,"fontWeight",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace",fontSize:11})} />
+                        <input value={s.fontWeight} onChange={e=>updateTextStyle(s.id,"fontWeight",e.target.value)} className="inp inp--full inp--mono inp--sm" />
 
                         {/* Line height */}
-                        <input value={s.lineHeight} onChange={e=>updateTextStyle(s.id,"lineHeight",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace",fontSize:11})} />
+                        <input value={s.lineHeight} onChange={e=>updateTextStyle(s.id,"lineHeight",e.target.value)} className="inp inp--full inp--mono inp--sm" />
 
                         {/* Letter spacing */}
-                        <div style={{display:"flex",gap:3,alignItems:"center"}}>
-                          <input value={s.letterSpacing} onChange={e=>updateTextStyle(s.id,"letterSpacing",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace",fontSize:11})} />
+                        <div className="flex-row">
+                          <input value={s.letterSpacing} onChange={e=>updateTextStyle(s.id,"letterSpacing",e.target.value)} className="inp inp--full inp--mono inp--sm" />
                         </div>
 
                         {/* Paragraph spacing */}
-                        <div style={{display:"flex",gap:3,alignItems:"center"}}>
-                          <input value={s.paragraphSpacing} onChange={e=>updateTextStyle(s.id,"paragraphSpacing",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace",fontSize:11})} />
+                        <div className="flex-row">
+                          <input value={s.paragraphSpacing} onChange={e=>updateTextStyle(s.id,"paragraphSpacing",e.target.value)} className="inp inp--full inp--mono inp--sm" />
                         </div>
 
                         {/* Text decoration */}
-                        <select value={s.textDecoration} onChange={e=>updateTextStyle(s.id,"textDecoration",e.target.value)} style={inp({width:"100%",fontSize:11,padding:"8px 6px"})}>
+                        <select value={s.textDecoration} onChange={e=>updateTextStyle(s.id,"textDecoration",e.target.value)} className="inp inp--full inp--sm">
                           {TS_DECORATION_OPTIONS.map(d=><option key={d} value={d}>{d.charAt(0)+d.slice(1).toLowerCase()}</option>)}
                         </select>
 
@@ -1321,7 +1309,7 @@ export default function App() {
                         <TextPreview style={s} />
 
                         {/* Delete */}
-                        <div style={{display:"flex",gap:2}}><button onClick={()=>dupTextStyle(s.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteTextStyle(s.id)} style={{...delBtn,fontSize:18}}>x</button></div>
+                        <div className="btn-group"><button onClick={()=>dupTextStyle(s.id)} className="dup-btn">⧉</button><button onClick={()=>deleteTextStyle(s.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
                       </div>
                     </DraggableRow>
                   ))}
@@ -1331,7 +1319,7 @@ export default function App() {
                 );
               })}
 
-              {tsGroups.length === 0 && <div style={{fontSize:13,color:"var(--text-secondary)",fontStyle:"italic",padding:"32px 0",textAlign:"center"}}>No groups yet. Click "+ Add Group" to start.</div>}
+              {tsGroups.length === 0 && <div className="empty-msg empty-msg--centered">No groups yet. Click "+ Add Group" to start.</div>}
             </div>
           )}
 
@@ -1339,15 +1327,15 @@ export default function App() {
           {tab==="Radius" && (
             <div>
               <TabHeader title="Border Radius Tokens" description="Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 0 8px 8px"}}>{selectAllChk(radius.map((r: any)=>r.id))}<span style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>Select all</span></div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:20,paddingLeft:8}}>
+              <div className="radius-select-all">{selectAllChk(radius.map((r: any)=>r.id))}<span className="radius-select-label">Select all</span></div>
+              <div className="radius-cards">
                 {radius.filter((r: any) => matchesSearch(search, r.name, r.value)).map((r: any) => (
-                  <div key={r.id} draggable onDragStart={()=>radiusDrag.onDragStart(r.id)} onDragOver={(e: any)=>radiusDrag.onDragOver(e,r.id)} onDrop={()=>radiusDrag.onDrop()} onDragEnd={()=>radiusDrag.onDragEnd()} style={{background:selected.has(r.id)?"var(--bg-selected)":"var(--bg-card)",border:"1px solid "+(selected.has(r.id)?"var(--accent)":"var(--border-struct)"),borderRadius:12,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",gap:14,width:120,boxSizing:"border-box",cursor:"grab",position:"relative"}}>
-                    <input type="checkbox" checked={selected.has(r.id)} onChange={()=>toggleSelect(r.id)} style={{...chkStyle,position:"absolute",top:8,left:8}} />
-                    <div style={{width:60,height:60,background:"#4f46e5",opacity:0.75,borderRadius:Math.min(parseInt(r.value)||0,30)+"px",flexShrink:0}} />
-                    <input value={r.name} onChange={e=>updateList(setRadius,r.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",textAlign:"center",padding:"7px 8px"})} />
-                    <div style={{display:"flex",gap:6,alignItems:"center",width:"100%"}}><input value={r.value} onChange={e=>updateList(setRadius,r.id,"value",e.target.value)} style={inp({flex:1,width:0,textAlign:"center",fontFamily:"monospace",padding:"7px 8px"})} /><span style={{fontSize:12,color:"var(--text-secondary)",flexShrink:0}}>px</span></div>
-                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setRadius,r.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setRadius,r.id)} style={{...delBtn,fontSize:12}}>Remove</button></div>
+                  <div key={r.id} draggable onDragStart={()=>radiusDrag.onDragStart(r.id)} onDragOver={(e: any)=>radiusDrag.onDragOver(e,r.id)} onDrop={()=>radiusDrag.onDrop()} onDragEnd={()=>radiusDrag.onDragEnd()} className={`radius-card ${selected.has(r.id)?"radius-card--selected":"radius-card--default"}`}>
+                    <input type="checkbox" checked={selected.has(r.id)} onChange={()=>toggleSelect(r.id)} className="chk radius-chk" />
+                    <div className="radius-preview" style={{borderRadius:Math.min(parseInt(r.value)||0,30)+"px"}} />
+                    <input value={r.name} onChange={e=>updateList(setRadius,r.id,"name",e.target.value)} className="inp inp--full inp--center inp--compact" />
+                    <div className="flex-row w-full"><input value={r.value} onChange={e=>updateList(setRadius,r.id,"value",e.target.value)} className="inp inp--center inp--mono inp--compact" style={{flex:1,width:0}} /><span className="unit">px</span></div>
+                    <div className="btn-group"><button onClick={()=>dupInList(setRadius,r.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setRadius,r.id)} className="del-btn" style={{fontSize:12}}>Remove</button></div>
                   </div>
                 ))}
               </div>
@@ -1359,21 +1347,21 @@ export default function App() {
           {tab==="Border" && (
             <div>
               <TabHeader title="Border Width Tokens" description="Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div style={colHdr}>
+              <div className="col-hdr">
                 {selectAllChk(borders.map((b: any)=>b.id))}
-                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                <div style={{flex:1,display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10}}>
-                {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                <div className="drag-handle drag-handle--hidden">⌿</div>
+                <div className="flex-1 grid-row grid-border">
+                {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
                 </div>
               </div>
               {borders.filter((b: any) => matchesSearch(search, b.name, b.value)).map((b: any) => (
                 <DraggableRow key={b.id} id={b.id} dragHandlers={borderDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
-                  <div style={{display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
-                    <span style={{fontSize:12,color:"var(--text-secondary)"}}>border /</span>
-                    <input value={b.name} onChange={e=>updateList(setBorders,b.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
-                    <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.value} onChange={e=>updateList(setBorders,b.id,"value",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"var(--text-secondary)"}}>px</span></div>
-                    <div style={{display:"flex",alignItems:"center"}}><div style={{width:80,height:Math.max(parseInt(b.value)||0,1),maxHeight:20,background:"#4f46e5",borderRadius:2,opacity:0.8}} /></div>
-                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setBorders,b.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setBorders,b.id)} style={{...delBtn,fontSize:18}}>x</button></div>
+                  <div className="grid-row grid-border">
+                    <span className="prefix">border /</span>
+                    <input value={b.name} onChange={e=>updateList(setBorders,b.id,"name",e.target.value)} className="inp inp--full" />
+                    <div className="flex-row"><input value={b.value} onChange={e=>updateList(setBorders,b.id,"value",e.target.value)} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
+                    <div style={{display:"flex",alignItems:"center"}}><div className="border-bar" style={{height:Math.max(parseInt(b.value)||0,1),maxHeight:20}} /></div>
+                    <div className="btn-group"><button onClick={()=>dupInList(setBorders,b.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setBorders,b.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
               ))}
@@ -1385,14 +1373,14 @@ export default function App() {
           {tab==="Shadows" && (
             <div>
               <TabHeader title="Shadow Tokens" description="Drag to reorder. Click the swatch to open the shadow picker." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 0 8px 8px",borderBottom:"1px solid var(--border-section)",marginBottom:4}}>
+              <div className="shadow-col-hdr">
                 {selectAllChk(shadows.map((s: any)=>s.id))}
-                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                <span style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",flexShrink:0,width:72}}>Prefix</span>
-                <span style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",flexShrink:0,width:140}}>Name</span>
-                <span style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",flex:1}}>Value</span>
-                <span style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",flexShrink:0,width:80}}>Preview</span>
-                <span style={{flexShrink:0,width:32}}></span>
+                <div className="drag-handle drag-handle--hidden">⌿</div>
+                <span className="col-hdr-label flex-shrink-0" style={{width:72}}>Prefix</span>
+                <span className="col-hdr-label flex-shrink-0" style={{width:140}}>Name</span>
+                <span className="col-hdr-label flex-1">Value</span>
+                <span className="col-hdr-label flex-shrink-0" style={{width:80}}>Preview</span>
+                <span className="flex-shrink-0" style={{width:32}}></span>
               </div>
               {shadows.filter((sh: any) => matchesSearch(search, sh.name, sh.value)).map((sh: any) => (
                 <ShadowRow key={sh.id} sh={sh} dragHandlers={shadowDrag}
@@ -1410,20 +1398,20 @@ export default function App() {
           {tab==="Z-Index" && (
             <div>
               <TabHeader title="Z-Index Tokens" description="Stacking order reference. Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div style={colHdr}>
+              <div className="col-hdr">
                 {selectAllChk(zindex.map((z: any)=>z.id))}
-                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 1fr 1fr 32px",gap:10}}>
-                {["Prefix","Name","Value",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                <div className="drag-handle drag-handle--hidden">⌿</div>
+                <div className="flex-1 grid-row grid-zindex">
+                {["Prefix","Name","Value",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
                 </div>
               </div>
               {zindex.filter((z: any) => matchesSearch(search, z.name, z.value)).map((z: any) => (
                 <DraggableRow key={z.id} id={z.id} dragHandlers={zDrag} checked={selected.has(z.id)} onCheck={toggleSelect}>
-                  <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 32px",gap:10,alignItems:"center"}}>
-                    <span style={{fontSize:12,color:"var(--text-secondary)"}}>z-index /</span>
-                    <input value={z.name} onChange={e=>updateList(setZIndex,z.id,"name",e.target.value)} style={inp()} />
-                    <input value={z.value} onChange={e=>updateList(setZIndex,z.id,"value",e.target.value)} style={inp({fontFamily:"monospace"})} />
-                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setZIndex,z.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setZIndex,z.id)} style={{...delBtn,fontSize:18}}>x</button></div>
+                  <div className="grid-row grid-zindex">
+                    <span className="prefix">z-index /</span>
+                    <input value={z.name} onChange={e=>updateList(setZIndex,z.id,"name",e.target.value)} className="inp" />
+                    <input value={z.value} onChange={e=>updateList(setZIndex,z.id,"value",e.target.value)} className="inp inp--mono" />
+                    <div className="btn-group"><button onClick={()=>dupInList(setZIndex,z.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setZIndex,z.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
               ))}
@@ -1435,36 +1423,36 @@ export default function App() {
           {tab==="Breakpoints" && (
             <div>
               <TabHeader title="Breakpoint Tokens" description="Min-width based. Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
-              <div style={colHdr}>
+              <div className="col-hdr">
                 {selectAllChk(breakpoints.map((b: any)=>b.id))}
-                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 1fr 1fr 1fr 1fr 32px",gap:10}}>
-                {["Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                <div className="drag-handle drag-handle--hidden">⌿</div>
+                <div className="flex-1 grid-row grid-breakpoints">
+                {["Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} className="col-hdr-label">{h}</div>)}
                 </div>
               </div>
               {breakpoints.filter((b: any) => matchesSearch(search, b.name, b.value, b.max)).map((b: any) => (
                 <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
-                  <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
-                    <span style={{fontSize:12,color:"var(--text-secondary)"}}>breakpoint /</span>
-                    <input value={b.name} onChange={e=>updateList(setBreakpoints,b.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
-                    <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.value} onChange={e=>{
+                  <div className="grid-row grid-breakpoints">
+                    <span className="prefix">breakpoint /</span>
+                    <input value={b.name} onChange={e=>updateList(setBreakpoints,b.id,"name",e.target.value)} className="inp inp--full" />
+                    <div className="flex-row"><input value={b.value} onChange={e=>{
                       const v = e.target.value;
                       setBreakpoints(list => { const ri = list.findIndex((bp: any) => bp.id === b.id); return list.map((bp: any, i: number) => {
                         if (i === ri) return { ...bp, value: v };
                         if (i === ri - 1) return { ...bp, max: v };
                         return bp;
                       }); });
-                    }} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"var(--text-secondary)",flexShrink:0}}>px</span></div>
-                    <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.max} onChange={e=>{
+                    }} className="inp inp--full inp--mono" /><span className="unit">px</span></div>
+                    <div className="flex-row"><input value={b.max} onChange={e=>{
                       const v = e.target.value;
                       setBreakpoints(list => { const ri = list.findIndex((bp: any) => bp.id === b.id); return list.map((bp: any, i: number) => {
                         if (i === ri) return { ...bp, max: v };
                         if (i === ri + 1) return { ...bp, value: v };
                         return bp;
                       }); });
-                    }} placeholder="none" style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"var(--text-secondary)",flexShrink:0}}>px</span></div>
-                    <div style={{fontSize:12,color:"var(--text-secondary)",fontFamily:"monospace"}}>{bpRange(b)}</div>
-                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setBreakpoints,b.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setBreakpoints,b.id)} style={{...delBtn,fontSize:18}}>x</button></div>
+                    }} placeholder="none" className="inp inp--full inp--mono" /><span className="unit">px</span></div>
+                    <div className="prefix mono">{bpRange(b)}</div>
+                    <div className="btn-group"><button onClick={()=>dupInList(setBreakpoints,b.id)} className="dup-btn">⧉</button><button onClick={()=>deleteList(setBreakpoints,b.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
               ))}
@@ -1476,11 +1464,11 @@ export default function App() {
           {customCollections.map((cc: any) => tab === cc.name && (
             <div key={cc.id}>
               <TabHeader title={cc.name} description={`Custom collection — exports as ${cc.jsonKey}.json`}
-                actions={tabActions(<button onClick={() => addCustomGroup(cc.id)} disabled={!cc.locked} style={{...tabAddBtnStyle, opacity: cc.locked ? 1 : 0.4, cursor: cc.locked ? "pointer" : "default"}}>+ Add Group</button>)} search={search} onSearch={setSearch} />
+                actions={tabActions(<button onClick={() => addCustomGroup(cc.id)} disabled={!cc.locked} className="tab-add-btn" style={{opacity: cc.locked ? 1 : 0.4, cursor: cc.locked ? "pointer" : "default"}}>+ Add Group</button>)} search={search} onSearch={setSearch} />
 
               {/* Collection settings */}
-              <div style={{display:"flex",gap:12,marginBottom:20,padding:12,background:"var(--bg-card)",borderRadius:8,border:"1px solid var(--border-section)",flexWrap:"wrap",alignItems:"center"}}>
-                <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"var(--text-secondary)"}}>
+              <div className="cc-settings">
+                <label className="cc-settings__label">
                   Tab Name
                   <input value={cc.name} disabled={cc.locked} onChange={e => {
                     const old = cc.name;
@@ -1488,19 +1476,19 @@ export default function App() {
                     setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, name: nv } : c));
                     setEnabledTabs(prev => { const next = new Set(prev); if (next.has(old)) { next.delete(old); next.add(nv); } return next; });
                     setTab(nv);
-                  }} style={inp({ width: 120, opacity: cc.locked ? 0.5 : 1 })} />
+                  }} className={`inp${cc.locked?" inp--locked":""}`} style={{width:120}} />
                 </label>
-                <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"var(--text-secondary)"}}>
+                <label className="cc-settings__label">
                   JSON Key
-                  <input value={cc.jsonKey} disabled={cc.locked} onChange={e => updateCustomCollection(cc.id, "jsonKey", e.target.value)} style={inp({ width: 120, fontFamily: "monospace", opacity: cc.locked ? 0.5 : 1 })} />
+                  <input value={cc.jsonKey} disabled={cc.locked} onChange={e => updateCustomCollection(cc.id, "jsonKey", e.target.value)} className={`inp inp--mono${cc.locked?" inp--locked":""}`} style={{width:120}} />
                 </label>
-                <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
+                <div className="cc-settings__actions">
                   {cc.locked ? (
-                    cc.items.length === 0 && <button onClick={() => updateCustomCollection(cc.id, "locked", false)} style={tabBtnStyle}>Edit</button>
+                    cc.items.length === 0 && <button onClick={() => updateCustomCollection(cc.id, "locked", false)} className="tab-btn">Edit</button>
                   ) : (
-                    <button onClick={() => updateCustomCollection(cc.id, "locked", true)} style={tabAddBtnStyle}>Save</button>
+                    <button onClick={() => updateCustomCollection(cc.id, "locked", true)} className="tab-add-btn">Save</button>
                   )}
-                  <button onClick={() => deleteCustomCollection(cc.id)} style={{fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger-text)",cursor:"pointer"}}>Delete Collection</button>
+                  <button onClick={() => deleteCustomCollection(cc.id)} className="cc-delete-btn">Delete Collection</button>
                 </div>
               </div>
 
@@ -1514,7 +1502,7 @@ export default function App() {
                   const [type, unit = ""] = e.target.value.split("|");
                   updateCustomGroup(cc.id, g.name, "type", type);
                   updateCustomGroup(cc.id, g.name, "unit", unit);
-                }} style={inp({ width: 150, fontSize: 10, padding: "4px 6px", opacity: gLocked ? 0.5 : 1 })}>
+                }} className={`inp inp--xs${gLocked?" inp--locked":""}`} style={{width:150}}>
                   <optgroup label="Unitless">
                     <option value="number">Number</option>
                     <option value="string">String</option>
@@ -1540,37 +1528,37 @@ export default function App() {
                   </optgroup>
                 </select>;
                 const groupSaveEdit = gLocked ? (
-                  groupItems.length === 0 && <button onClick={() => updateCustomGroup(cc.id, g.name, "locked", false)} style={{...tabBtnStyle,fontSize:10,padding:"4px 8px"}}>Edit</button>
+                  groupItems.length === 0 && <button onClick={() => updateCustomGroup(cc.id, g.name, "locked", false)} className="tab-btn" style={{fontSize:10,padding:"4px 8px"}}>Edit</button>
                 ) : (
-                  <button onClick={() => updateCustomGroup(cc.id, g.name, "locked", true)} style={{...tabAddBtnStyle,fontSize:10,padding:"4px 8px"}}>Save</button>
+                  <button onClick={() => updateCustomGroup(cc.id, g.name, "locked", true)} className="tab-add-btn" style={{fontSize:10,padding:"4px 8px"}}>Save</button>
                 );
                 return (
-                  <div key={g.name} onDragOver={!singleGroup ? (e: any)=>{ if(e.dataTransfer.types.includes(GROUP_DRAG_TYPE)){e.preventDefault();e.stopPropagation();(e.currentTarget as HTMLElement).style.borderTop="2px solid var(--accent)";}} : undefined} onDragLeave={!singleGroup ? (e: any)=>{(e.currentTarget as HTMLElement).style.borderTop="";} : undefined} onDrop={!singleGroup ? (e: any)=>{(e.currentTarget as HTMLElement).style.borderTop="";const from=e.dataTransfer.getData(GROUP_DRAG_TYPE);if(!from||from===g.name)return;e.preventDefault();e.stopPropagation();setCustomCollections(ccs=>ccs.map(c=>{if(c.id!==cc.id)return c;const gs=[...c.groups];const fi=gs.findIndex((x: any)=>x.name===from),ti=gs.findIndex((x: any)=>x.name===g.name);if(fi<0||ti<0)return c;const[m]=gs.splice(fi,1);gs.splice(ti,0,m);return{...c,groups:gs};}));} : undefined} style={{marginBottom:28}}>
+                  <div key={g.name} onDragOver={!singleGroup ? (e: any)=>{ if(e.dataTransfer.types.includes(GROUP_DRAG_TYPE)){e.preventDefault();e.stopPropagation();(e.currentTarget as HTMLElement).style.borderTop="2px solid var(--accent)";}} : undefined} onDragLeave={!singleGroup ? (e: any)=>{(e.currentTarget as HTMLElement).style.borderTop="";} : undefined} onDrop={!singleGroup ? (e: any)=>{(e.currentTarget as HTMLElement).style.borderTop="";const from=e.dataTransfer.getData(GROUP_DRAG_TYPE);if(!from||from===g.name)return;e.preventDefault();e.stopPropagation();setCustomCollections(ccs=>ccs.map(c=>{if(c.id!==cc.id)return c;const gs=[...c.groups];const fi=gs.findIndex((x: any)=>x.name===from),ti=gs.findIndex((x: any)=>x.name===g.name);if(fi<0||ti<0)return c;const[m]=gs.splice(fi,1);gs.splice(ti,0,m);return{...c,groups:gs};}));} : undefined} className="mb-28">
                     {singleGroup ? (
-                      <div style={{...hdrStyle,justifyContent:"space-between"}}>
-                        <span style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Value Type</span>
+                      <div className="hdr-style" style={{justifyContent:"space-between"}}>
+                        <span className="col-hdr-label" style={{letterSpacing:"0.07em"}}>Value Type</span>
                         {valueTypeSelect}
                         {groupSaveEdit}
-                        <div style={{flex:1}} />
+                        <div className="flex-1" />
                       </div>
                     ) : (
-                      <div style={hdrStyle}>
-                        <div draggable onDragStart={(e: any)=>{e.dataTransfer.setData(GROUP_DRAG_TYPE,g.name);e.dataTransfer.effectAllowed="move";e.stopPropagation();}} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div>
+                      <div className="hdr-style">
+                        <div draggable onDragStart={(e: any)=>{e.dataTransfer.setData(GROUP_DRAG_TYPE,g.name);e.dataTransfer.effectAllowed="move";e.stopPropagation();}} className="drag-handle">⌿</div>
                         <InlineLabel value={g.name} prefix={cc.jsonKey + " / "} onCommit={(n: string) => renameCustomGroup(cc.id, g.name, n)} />
                         {valueTypeSelect}
                         {groupSaveEdit}
-                        <div style={{flex:1,height:1,background:"var(--border-section)"}} />
-                        <button onClick={() => { const nn=g.name+" copy"; setCustomCollections(ccs=>ccs.map(c=>{if(c.id!==cc.id)return c;const idx=c.groups.findIndex((gr: any)=>gr.name===g.name);const newGroups=[...c.groups];newGroups.splice(idx+1,0,{...g,name:nn,locked:g.locked});const newItems=[...c.items,...c.items.filter((i: any)=>i.group===g.name).map((i: any)=>({...i,id:uid(),group:nn}))];return{...c,groups:newGroups,items:newItems};})); }} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={() => deleteCustomGroup(cc.id, g.name)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
+                        <div className="section-divider" />
+                        <button onClick={() => { const nn=g.name+" copy"; setCustomCollections(ccs=>ccs.map(c=>{if(c.id!==cc.id)return c;const idx=c.groups.findIndex((gr: any)=>gr.name===g.name);const newGroups=[...c.groups];newGroups.splice(idx+1,0,{...g,name:nn,locked:g.locked});const newItems=[...c.items,...c.items.filter((i: any)=>i.group===g.name).map((i: any)=>({...i,id:uid(),group:nn}))];return{...c,groups:newGroups,items:newItems};})); }} className="dup-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={() => deleteCustomGroup(cc.id, g.name)} className="del-btn" style={{fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
                       </div>
                     )}
-                    {groupItems.length === 0 && <div style={{fontSize:12,color:"var(--text-secondary)",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
+                    {groupItems.length === 0 && <div className="empty-msg">No tokens yet.</div>}
                     {groupItems.length > 0 && (
                       <div>
-                        <div style={colHdr}>
+                        <div className="col-hdr">
                           {selectAllChk(groupItems.map((i: any)=>i.id))}
-                          <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                          <div style={{flex:1,display:"grid",gridTemplateColumns:"1fr 1fr 32px",gap:10}}>
-                          {["Name","Value",""].map((h,i) => <div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                          <div className="drag-handle drag-handle--hidden">⌿</div>
+                          <div className="flex-1 grid-row grid-custom">
+                          {["Name","Value",""].map((h,i) => <div key={i} className="col-hdr-label">{h}</div>)}
                           </div>
                         </div>
                         {groupItems.map((item: any) => (
@@ -1594,22 +1582,22 @@ export default function App() {
                             },
                             onDragEnd: () => { if (ccDragRef.current[cc.id]) ccDragRef.current[cc.id] = { dragId: null, overId: null }; },
                           }}>
-                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 32px",gap:10,alignItems:"center"}}>
-                              <input value={item.name} onChange={e => updateCustomItem(cc.id, item.id, "name", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box" })} />
+                            <div className="grid-row grid-custom">
+                              <input value={item.name} onChange={e => updateCustomItem(cc.id, item.id, "name", e.target.value)} className="inp inp--full" />
                               {g.type === "color" ? (
                                 <PrimSelector value={item.value} primitives={primitives} primGroups={primGroups} onChange={(v: string) => updateCustomItem(cc.id, item.id, "value", v)} mode="Value" />
                               ) : g.type === "fontFamily" ? (
-                                <select value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", fontSize: 11, padding: "8px 6px", fontFamily: item.value })}>
+                                <select value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} className="inp inp--full inp--sm" style={{fontFamily:item.value}}>
                                   {FONT_FAMILIES.map(f => <option key={f.value} value={f.value} style={{fontFamily: f.value}}>{f.label}</option>)}
                                   {!FONT_FAMILIES.some(f => f.value === item.value) && <option value={item.value}>{item.value}</option>}
                                 </select>
                               ) : (
-                                <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                                  <input value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box", fontFamily: "monospace" })} />
-                                  {g.unit && <span style={{fontSize:12,color:"var(--text-secondary)",flexShrink:0}}>{g.unit}</span>}
+                                <div className="flex-row">
+                                  <input value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} className="inp inp--full inp--mono" />
+                                  {g.unit && <span className="unit">{g.unit}</span>}
                                 </div>
                               )}
-                              <div style={{display:"flex",gap:2}}><button onClick={() => dupCustomItem(cc.id, item.id)} style={dupBtn}>⧉</button><button onClick={() => deleteCustomItem(cc.id, item.id)} style={{...delBtn,fontSize:18}}>x</button></div>
+                              <div className="btn-group"><button onClick={() => dupCustomItem(cc.id, item.id)} className="dup-btn">⧉</button><button onClick={() => deleteCustomItem(cc.id, item.id)} className="del-btn" style={{fontSize:18}}>x</button></div>
                             </div>
                           </DraggableRow>
                         ))}
@@ -1624,25 +1612,25 @@ export default function App() {
 
           {/* Bulk action bar */}
           {selected.size > 0 && (
-            <div style={{position:"fixed",bottom:0,left:161,right:0,background:"var(--bg-input)",border:"1px solid var(--accent)",borderRadius:"10px 10px 0 0",padding:"10px 16px",display:"flex",alignItems:"center",gap:10,boxShadow:"0 -4px 24px rgba(0,0,0,0.5)",zIndex:1000,flexWrap:"wrap"}}>
-              <span style={{fontSize:13,fontWeight:600,color:"var(--accent-text)",flexShrink:0}}>{selected.size} selected</span>
-              <div style={{width:1,height:20,background:"var(--border-input)",flexShrink:0}} />
+            <div className="bulk-bar">
+              <span className="bulk-bar__count">{selected.size} selected</span>
+              <div className="bulk-bar__divider" />
               {(tab==="Colors") && <>
-                <label style={{fontSize:11,color:"var(--text-secondary)",display:"flex",gap:4,alignItems:"center"}}>Group <select onChange={e=>{if(e.target.value)bulkApply("group",e.target.value);e.target.value="";}} style={inp({width:100,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{colorGroups.map(g=><option key={g} value={g}>{g}</option>)}</select></label>
+                <label className="bulk-bar__label">Group <select onChange={e=>{if(e.target.value)bulkApply("group",e.target.value);e.target.value="";}} className="inp inp--xs" style={{width:100}}><option value="">—</option>{colorGroups.map(g=><option key={g} value={g}>{g}</option>)}</select></label>
               </>}
               {(tab==="Text Styles") && <>
-                <label style={{fontSize:11,color:"var(--text-secondary)",display:"flex",gap:4,alignItems:"center"}}>Font <select onChange={e=>{if(e.target.value)bulkApply("fontFamily",e.target.value);e.target.value="";}} style={inp({width:130,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{FONT_FAMILIES.map(f=><option key={f.value} value={f.value}>{f.label}</option>)}</select></label>
-                <label style={{fontSize:11,color:"var(--text-secondary)",display:"flex",gap:4,alignItems:"center"}}>Size <input type="number" min="1" placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("fontSize",(e.target as any).value);(e.target as any).value="";}}} style={inp({width:50,fontSize:11,padding:"4px 6px"})} /></label>
-                <label style={{fontSize:11,color:"var(--text-secondary)",display:"flex",gap:4,alignItems:"center"}}>Weight <select onChange={e=>{if(e.target.value)bulkApply("fontWeight",e.target.value);e.target.value="";}} style={inp({width:70,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{["100","200","300","400","500","600","700","800","900"].map(w=><option key={w} value={w}>{w}</option>)}</select></label>
-                <label style={{fontSize:11,color:"var(--text-secondary)",display:"flex",gap:4,alignItems:"center"}}>L.Height <input placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("lineHeight",(e.target as any).value);(e.target as any).value="";}}} style={inp({width:50,fontSize:11,padding:"4px 6px"})} /></label>
-                <label style={{fontSize:11,color:"var(--text-secondary)",display:"flex",gap:4,alignItems:"center"}}>L.Space <input placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("letterSpacing",(e.target as any).value);(e.target as any).value="";}}} style={inp({width:50,fontSize:11,padding:"4px 6px"})} /></label>
-                <label style={{fontSize:11,color:"var(--text-secondary)",display:"flex",gap:4,alignItems:"center"}}>P.Space <input placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("paragraphSpacing",(e.target as any).value);(e.target as any).value="";}}} style={inp({width:50,fontSize:11,padding:"4px 6px"})} /></label>
-                <label style={{fontSize:11,color:"var(--text-secondary)",display:"flex",gap:4,alignItems:"center"}}>Decoration <select onChange={e=>{if(e.target.value)bulkApply("textDecoration",e.target.value);e.target.value="";}} style={inp({width:100,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{["NONE","UNDERLINE","STRIKETHROUGH"].map(d=><option key={d} value={d}>{d}</option>)}</select></label>
-                <label style={{fontSize:11,color:"var(--text-secondary)",display:"flex",gap:4,alignItems:"center"}}>Group <select onChange={e=>{if(e.target.value)bulkApply("group",e.target.value);e.target.value="";}} style={inp({width:100,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{tsGroups.map(g=><option key={g} value={g}>{g}</option>)}</select></label>
+                <label className="bulk-bar__label">Font <select onChange={e=>{if(e.target.value)bulkApply("fontFamily",e.target.value);e.target.value="";}} className="inp inp--xs" style={{width:130}}><option value="">—</option>{FONT_FAMILIES.map(f=><option key={f.value} value={f.value}>{f.label}</option>)}</select></label>
+                <label className="bulk-bar__label">Size <input type="number" min="1" placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("fontSize",(e.target as any).value);(e.target as any).value="";}}} className="inp inp--xs" style={{width:50}} /></label>
+                <label className="bulk-bar__label">Weight <select onChange={e=>{if(e.target.value)bulkApply("fontWeight",e.target.value);e.target.value="";}} className="inp inp--xs" style={{width:70}}><option value="">—</option>{["100","200","300","400","500","600","700","800","900"].map(w=><option key={w} value={w}>{w}</option>)}</select></label>
+                <label className="bulk-bar__label">L.Height <input placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("lineHeight",(e.target as any).value);(e.target as any).value="";}}} className="inp inp--xs" style={{width:50}} /></label>
+                <label className="bulk-bar__label">L.Space <input placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("letterSpacing",(e.target as any).value);(e.target as any).value="";}}} className="inp inp--xs" style={{width:50}} /></label>
+                <label className="bulk-bar__label">P.Space <input placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("paragraphSpacing",(e.target as any).value);(e.target as any).value="";}}} className="inp inp--xs" style={{width:50}} /></label>
+                <label className="bulk-bar__label">Decoration <select onChange={e=>{if(e.target.value)bulkApply("textDecoration",e.target.value);e.target.value="";}} className="inp inp--xs" style={{width:100}}><option value="">—</option>{["NONE","UNDERLINE","STRIKETHROUGH"].map(d=><option key={d} value={d}>{d}</option>)}</select></label>
+                <label className="bulk-bar__label">Group <select onChange={e=>{if(e.target.value)bulkApply("group",e.target.value);e.target.value="";}} className="inp inp--xs" style={{width:100}}><option value="">—</option>{tsGroups.map(g=><option key={g} value={g}>{g}</option>)}</select></label>
               </>}
-              <div style={{flex:1}} />
-              <button onClick={bulkDelete} style={{fontSize:12,padding:"5px 10px",borderRadius:5,border:"1px solid var(--danger-border)",background:"var(--danger-bg)",color:"var(--danger-text)",cursor:"pointer"}}>Delete</button>
-              <button onClick={()=>setSelected(new Set())} style={{fontSize:12,padding:"5px 10px",borderRadius:5,border:"1px solid var(--border-input)",background:"transparent",color:"var(--text-secondary)",cursor:"pointer"}}>Clear (Esc)</button>
+              <div className="flex-1" />
+              <button onClick={bulkDelete} className="bulk-bar__delete">Delete</button>
+              <button onClick={()=>setSelected(new Set())} className="bulk-bar__clear">Clear (Esc)</button>
             </div>
           )}
 
@@ -1650,12 +1638,12 @@ export default function App() {
 
         {/* JSON Preview */}
         {showPreview && (
-          <div style={{width:420,background:"var(--bg-preview)",borderLeft:"1px solid var(--border-struct)",display:"flex",flexDirection:"column",flexShrink:0}}>
-            <div style={{padding:"12px 16px",borderBottom:"1px solid var(--border-struct)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:13,fontWeight:600}}>{tab} — DTCG JSON</span>
-              <span style={{fontSize:11,color:"var(--text-secondary)"}}>Figma native format</span>
+          <div className="preview-panel">
+            <div className="preview-panel__header">
+              <span className="preview-panel__title">{tab} — DTCG JSON</span>
+              <span className="preview-panel__subtitle">Figma native format</span>
             </div>
-            <pre style={{flex:1,overflow:"auto",padding:16,fontSize:11,color:"var(--json-green)",fontFamily:"monospace",lineHeight:1.6,margin:0}}>{previewJSON()}</pre>
+            <pre className="preview-panel__code">{previewJSON()}</pre>
           </div>
         )}
 
