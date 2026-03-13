@@ -155,6 +155,144 @@ function dlJSON(json: string, filename: string) {
   a.href = URL.createObjectURL(new Blob([json],{type:"application/json"}));
   a.download = filename; a.click();
 }
+function dlText(text: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text],{type:"text/plain"}));
+  a.download = filename; a.click();
+}
+
+// ── CSS variables generators ─────────────────────────────────────────────────
+function genPrimitivesCSS(primGroups: any[], primitives: any) {
+  let css = "/* ── Custom Properties ── */\n:root {\n";
+  primGroups.forEach(g => { g.shades.forEach((s: string) => { const h = primitives[g.key]?.[s]; if (h) css += `  --primitives-${g.key}-${s}: ${h};\n`; }); });
+  css += `  --primitives-base-white: ${primitives.base?.white||"#FFFFFF"};\n`;
+  css += `  --primitives-base-black: ${primitives.base?.black||"#000000"};\n`;
+  css += "}\n\n/* ── Utility Classes ── */\n";
+  primGroups.forEach(g => { g.shades.forEach((s: string) => { const h = primitives[g.key]?.[s]; if (h) { css += `.bg-${g.key}-${s} { background-color: var(--primitives-${g.key}-${s}); }\n`; css += `.text-${g.key}-${s} { color: var(--primitives-${g.key}-${s}); }\n`; } }); });
+  css += `.bg-white { background-color: var(--primitives-base-white); }\n.text-white { color: var(--primitives-base-white); }\n`;
+  css += `.bg-black { background-color: var(--primitives-base-black); }\n.text-black { color: var(--primitives-base-black); }\n`;
+  return css;
+}
+function genColorsCSS(colors: any[], primitives: any, mode: string) {
+  const sel = mode === "dark" ? "[data-theme=\"dark\"]" : ":root";
+  let css = `/* ── Custom Properties ── */\n${sel} {\n`;
+  colors.forEach(c => { const raw = resolveColor(mode==="light"?c.light:c.dark, primitives); css += `  --color-${c.group}-${c.name}: ${raw};\n`; });
+  css += "}\n\n/* ── Utility Classes ── */\n";
+  const pre = mode === "dark" ? "[data-theme=\"dark\"] " : "";
+  colors.forEach(c => {
+    css += `${pre}.bg-${c.group}-${c.name} { background-color: var(--color-${c.group}-${c.name}); }\n`;
+    css += `${pre}.text-${c.group}-${c.name} { color: var(--color-${c.group}-${c.name}); }\n`;
+    css += `${pre}.border-${c.group}-${c.name} { border-color: var(--color-${c.group}-${c.name}); }\n`;
+  });
+  return css;
+}
+function genSpacingCSS(spacing: any[]) {
+  let css = "/* ── Custom Properties ── */\n:root {\n";
+  spacing.forEach(s => { css += `  --spacing-${s.name}: ${parseFloat(s.value)||0}px;\n`; });
+  css += "}\n\n/* ── Utility Classes ── */\n";
+  spacing.forEach(s => {
+    css += `.p-${s.name} { padding: var(--spacing-${s.name}); }\n`;
+    css += `.px-${s.name} { padding-inline: var(--spacing-${s.name}); }\n`;
+    css += `.py-${s.name} { padding-block: var(--spacing-${s.name}); }\n`;
+    css += `.m-${s.name} { margin: var(--spacing-${s.name}); }\n`;
+    css += `.mx-${s.name} { margin-inline: var(--spacing-${s.name}); }\n`;
+    css += `.my-${s.name} { margin-block: var(--spacing-${s.name}); }\n`;
+    css += `.gap-${s.name} { gap: var(--spacing-${s.name}); }\n`;
+  });
+  return css;
+}
+function genTypographyCSS(typography: any) {
+  let css = "/* ── Custom Properties ── */\n:root {\n";
+  typography.families.forEach((f: any) => { css += `  --font-family-${f.name}: ${f.value};\n`; });
+  typography.sizes.forEach((s: any) => { css += `  --font-size-${s.name}: ${parseFloat(s.value)||0}px;\n`; });
+  typography.weights.forEach((w: any) => { css += `  --font-weight-${w.name}: ${parseFloat(w.value)||0};\n`; });
+  typography.lineHeights.forEach((l: any) => { css += `  --line-height-${l.name}: ${l.value};\n`; });
+  css += "}\n\n/* ── Utility Classes ── */\n";
+  typography.families.forEach((f: any) => { css += `.font-${f.name} { font-family: var(--font-family-${f.name}); }\n`; });
+  typography.sizes.forEach((s: any) => { css += `.text-${s.name} { font-size: var(--font-size-${s.name}); }\n`; });
+  typography.weights.forEach((w: any) => { css += `.font-${w.name} { font-weight: var(--font-weight-${w.name}); }\n`; });
+  typography.lineHeights.forEach((l: any) => { css += `.leading-${l.name} { line-height: var(--line-height-${l.name}); }\n`; });
+  return css;
+}
+function genTextStylesCSS(textStyles: any[]) {
+  let css = "/* ── Utility Classes ── */\n";
+  textStyles.forEach(s => {
+    css += `.text-${s.group}-${s.name} {\n`;
+    css += `  font-family: ${s.fontFamily};\n  font-size: ${s.fontSize}px;\n  font-weight: ${s.fontWeight};\n  line-height: ${s.lineHeight};\n  letter-spacing: ${parseFloat(s.letterSpacing)||0}px;\n`;
+    if (s.textDecoration && s.textDecoration !== "NONE") css += `  text-decoration: ${s.textDecoration.toLowerCase()};\n`;
+    css += "}\n";
+  });
+  return css;
+}
+function genRadiusCSS(radius: any[]) {
+  let css = "/* ── Custom Properties ── */\n:root {\n";
+  radius.forEach(r => { css += `  --radius-${r.name}: ${parseFloat(r.value)||0}px;\n`; });
+  css += "}\n\n/* ── Utility Classes ── */\n";
+  radius.forEach(r => { css += `.rounded-${r.name} { border-radius: var(--radius-${r.name}); }\n`; });
+  return css;
+}
+function genBorderCSS(borders: any[]) {
+  let css = "/* ── Custom Properties ── */\n:root {\n";
+  borders.forEach(b => { css += `  --border-width-${b.name}: ${parseFloat(b.value)||0}px;\n`; });
+  css += "}\n\n/* ── Utility Classes ── */\n";
+  borders.forEach(b => { css += `.border-${b.name} { border-width: var(--border-width-${b.name}); }\n`; });
+  return css;
+}
+function genShadowsCSS(shadows: any[]) {
+  let css = "/* ── Custom Properties ── */\n:root {\n";
+  shadows.forEach(s => { css += `  --shadow-${s.name}: ${s.value};\n`; });
+  css += "}\n\n/* ── Utility Classes ── */\n";
+  shadows.forEach(s => { css += `.shadow-${s.name} { box-shadow: var(--shadow-${s.name}); }\n`; });
+  return css;
+}
+function genZIndexCSS(zindex: any[]) {
+  let css = "/* ── Custom Properties ── */\n:root {\n";
+  zindex.forEach(z => { css += `  --z-index-${z.name}: ${parseFloat(z.value)||0};\n`; });
+  css += "}\n\n/* ── Utility Classes ── */\n";
+  zindex.forEach(z => { css += `.z-${z.name} { z-index: var(--z-index-${z.name}); }\n`; });
+  return css;
+}
+function genBreakpointsCSS(bps: any[]) {
+  let css = "/* ── Custom Properties ── */\n:root {\n";
+  bps.forEach(b => { css += `  --breakpoint-${b.name}: ${parseFloat(b.value)||0}px;\n`; });
+  css += "}\n\n/* ── Utility Classes ── */\n";
+  bps.forEach(b => { css += `@media (min-width: ${parseFloat(b.value)||0}px) { .show-${b.name} { display: block; } .hide-${b.name} { display: none; } }\n`; });
+  return css;
+}
+function genCustomCSS(items: any[], groups: any[], jsonKey: string) {
+  let css = "/* ── Custom Properties ── */\n:root {\n";
+  items.forEach(i => { const g = groups.find((gr: any)=>gr.name===i.group) || groups[0] || {unit:""}; css += `  --${jsonKey}-${i.name}: ${i.value}${g.unit||""};\n`; });
+  css += "}\n";
+  return css;
+}
+
+// ── Tailwind config generators ───────────────────────────────────────────────
+function genPrimitivesTW(primGroups: any[], primitives: any) {
+  const colors: any = {};
+  primGroups.forEach(g => { colors[g.key] = {}; g.shades.forEach((s: string) => { const h = primitives[g.key]?.[s]; if (h) colors[g.key][s] = h; }); });
+  colors.white = primitives.base?.white||"#FFFFFF";
+  colors.black = primitives.base?.black||"#000000";
+  return JSON.stringify({ theme: { extend: { colors } } }, null, 2);
+}
+function genColorsTW(colors: any[], primitives: any, mode: string) {
+  const c: any = {};
+  colors.forEach(cl => { if(!c[cl.group])c[cl.group]={}; c[cl.group][cl.name] = resolveColor(mode==="light"?cl.light:cl.dark, primitives); });
+  return JSON.stringify({ theme: { extend: { colors: c } } }, null, 2);
+}
+function genSpacingTW(spacing: any[]) { const s: any = {}; spacing.forEach(sp => { s[sp.name] = `${parseFloat(sp.value)||0}px`; }); return JSON.stringify({ theme: { extend: { spacing: s } } }, null, 2); }
+function genTypographyTW(typography: any) {
+  const fontFamily: any = {}, fontSize: any = {}, fontWeight: any = {}, lineHeight: any = {};
+  typography.families.forEach((f: any) => { fontFamily[f.name] = f.value.split(",").map((s: string)=>s.trim()); });
+  typography.sizes.forEach((s: any) => { fontSize[s.name] = `${parseFloat(s.value)||0}px`; });
+  typography.weights.forEach((w: any) => { fontWeight[w.name] = `${parseFloat(w.value)||0}`; });
+  typography.lineHeights.forEach((l: any) => { lineHeight[l.name] = l.value; });
+  return JSON.stringify({ theme: { extend: { fontFamily, fontSize, fontWeight, lineHeight } } }, null, 2);
+}
+function genRadiusTW(radius: any[]) { const r: any = {}; radius.forEach(rd => { r[rd.name] = `${parseFloat(rd.value)||0}px`; }); return JSON.stringify({ theme: { extend: { borderRadius: r } } }, null, 2); }
+function genBorderTW(borders: any[]) { const b: any = {}; borders.forEach(bd => { b[bd.name] = `${parseFloat(bd.value)||0}px`; }); return JSON.stringify({ theme: { extend: { borderWidth: b } } }, null, 2); }
+function genShadowsTW(shadows: any[]) { const s: any = {}; shadows.forEach(sh => { s[sh.name] = sh.value; }); return JSON.stringify({ theme: { extend: { boxShadow: s } } }, null, 2); }
+function genZIndexTW(zindex: any[]) { const z: any = {}; zindex.forEach(zi => { z[zi.name] = `${parseFloat(zi.value)||0}`; }); return JSON.stringify({ theme: { extend: { zIndex: z } } }, null, 2); }
+function genBreakpointsTW(bps: any[]) { const s: any = {}; bps.forEach(b => { s[b.name] = `${parseFloat(b.value)||0}px`; }); return JSON.stringify({ theme: { extend: { screens: s } } }, null, 2); }
 
 // ── Default data ──────────────────────────────────────────────────────────────
 const defaultColors = [
@@ -328,34 +466,73 @@ function ShadowRow({ sh, dragHandlers, onChangeName, onChangeValue, onDelete, on
 
 // ── Download panel ────────────────────────────────────────────────────────────
 function DownloadPanel({ enabled, primGroups, primitives, colors, spacing, typography, textStyles, radius, borders, shadows, zindex, breakpoints, customCollections }: any) {
-  const allFiles = [
-    { tab:"Primitives",   label:"primitives.json",     name:"primitives.json",     json:() => genPrimitivesJSON(primGroups,primitives)     },
-    { tab:"Colors",       label:"colors-light.json",   name:"colors-light.json",   json:() => genColorsJSON(colors,primitives,"light")     },
-    { tab:"Colors",       label:"colors-dark.json",    name:"colors-dark.json",    json:() => genColorsJSON(colors,primitives,"dark")      },
-    { tab:"Spacing",      label:"spacing.json",        name:"spacing.json",        json:() => genSpacingJSON(spacing)                      },
-    { tab:"Typography",   label:"typography.json",     name:"typography.json",     json:() => genTypographyJSON(typography)                },
-    { tab:"Text Styles",  label:"text-styles.json",    name:"text-styles.json",    json:() => genTextStylesJSON(textStyles)                },
-    { tab:"Radius",       label:"radius.json",         name:"radius.json",         json:() => genRadiusJSON(radius)                        },
-    { tab:"Border",       label:"border-width.json",   name:"border-width.json",   json:() => genBorderJSON(borders)                       },
-    { tab:"Shadows",      label:"shadows.json",        name:"shadows.json",        json:() => genShadowsJSON(shadows)                      },
-    { tab:"Z-Index",      label:"z-index.json",        name:"z-index.json",        json:() => genZIndexJSON(zindex)                        },
-    { tab:"Breakpoints",  label:"breakpoints.json",    name:"breakpoints.json",    json:() => genBreakpointsJSON(breakpoints)              },
-    ...(customCollections||[]).map((c: any) => ({ tab:c.name, label:c.jsonKey+".json", name:c.jsonKey+".json", json:()=>genCustomJSON(c.items,c.groups) })),
-  ].filter(f => enabled.has(f.tab));
+  const [fmt, setFmt] = useState<"dtcg"|"css"|"tailwind">("dtcg");
 
+  const dtcgFiles = [
+    { tab:"Primitives",   label:"primitives.json",     name:"primitives.json",     gen:() => genPrimitivesJSON(primGroups,primitives)     },
+    { tab:"Colors",       label:"colors-light.json",   name:"colors-light.json",   gen:() => genColorsJSON(colors,primitives,"light")     },
+    { tab:"Colors",       label:"colors-dark.json",    name:"colors-dark.json",    gen:() => genColorsJSON(colors,primitives,"dark")      },
+    { tab:"Spacing",      label:"spacing.json",        name:"spacing.json",        gen:() => genSpacingJSON(spacing)                      },
+    { tab:"Typography",   label:"typography.json",     name:"typography.json",     gen:() => genTypographyJSON(typography)                },
+    { tab:"Text Styles",  label:"text-styles.json",    name:"text-styles.json",    gen:() => genTextStylesJSON(textStyles)                },
+    { tab:"Radius",       label:"radius.json",         name:"radius.json",         gen:() => genRadiusJSON(radius)                        },
+    { tab:"Border",       label:"border-width.json",   name:"border-width.json",   gen:() => genBorderJSON(borders)                       },
+    { tab:"Shadows",      label:"shadows.json",        name:"shadows.json",        gen:() => genShadowsJSON(shadows)                      },
+    { tab:"Z-Index",      label:"z-index.json",        name:"z-index.json",        gen:() => genZIndexJSON(zindex)                        },
+    { tab:"Breakpoints",  label:"breakpoints.json",    name:"breakpoints.json",    gen:() => genBreakpointsJSON(breakpoints)              },
+    ...(customCollections||[]).map((c: any) => ({ tab:c.name, label:c.jsonKey+".json", name:c.jsonKey+".json", gen:()=>genCustomJSON(c.items,c.groups) })),
+  ];
+  const cssFiles = [
+    { tab:"Primitives",   label:"primitives.css",      name:"primitives.css",      gen:() => genPrimitivesCSS(primGroups,primitives)      },
+    { tab:"Colors",       label:"colors-light.css",    name:"colors-light.css",    gen:() => genColorsCSS(colors,primitives,"light")      },
+    { tab:"Colors",       label:"colors-dark.css",     name:"colors-dark.css",     gen:() => genColorsCSS(colors,primitives,"dark")       },
+    { tab:"Spacing",      label:"spacing.css",         name:"spacing.css",         gen:() => genSpacingCSS(spacing)                       },
+    { tab:"Typography",   label:"typography.css",      name:"typography.css",      gen:() => genTypographyCSS(typography)                 },
+    { tab:"Text Styles",  label:"text-styles.css",     name:"text-styles.css",     gen:() => genTextStylesCSS(textStyles)                 },
+    { tab:"Radius",       label:"radius.css",          name:"radius.css",          gen:() => genRadiusCSS(radius)                         },
+    { tab:"Border",       label:"border-width.css",    name:"border-width.css",    gen:() => genBorderCSS(borders)                        },
+    { tab:"Shadows",      label:"shadows.css",         name:"shadows.css",         gen:() => genShadowsCSS(shadows)                       },
+    { tab:"Z-Index",      label:"z-index.css",         name:"z-index.css",         gen:() => genZIndexCSS(zindex)                         },
+    { tab:"Breakpoints",  label:"breakpoints.css",     name:"breakpoints.css",     gen:() => genBreakpointsCSS(breakpoints)               },
+    ...(customCollections||[]).map((c: any) => ({ tab:c.name, label:c.jsonKey+".css", name:c.jsonKey+".css", gen:()=>genCustomCSS(c.items,c.groups,c.jsonKey) })),
+  ];
+  const twFiles = [
+    { tab:"Primitives",   label:"primitives.tw.json",  name:"primitives.tw.json",  gen:() => genPrimitivesTW(primGroups,primitives)       },
+    { tab:"Colors",       label:"colors-light.tw.json",name:"colors-light.tw.json",gen:() => genColorsTW(colors,primitives,"light")       },
+    { tab:"Colors",       label:"colors-dark.tw.json", name:"colors-dark.tw.json", gen:() => genColorsTW(colors,primitives,"dark")        },
+    { tab:"Spacing",      label:"spacing.tw.json",     name:"spacing.tw.json",     gen:() => genSpacingTW(spacing)                        },
+    { tab:"Typography",   label:"typography.tw.json",  name:"typography.tw.json",  gen:() => genTypographyTW(typography)                  },
+    { tab:"Radius",       label:"radius.tw.json",      name:"radius.tw.json",      gen:() => genRadiusTW(radius)                          },
+    { tab:"Border",       label:"border.tw.json",      name:"border.tw.json",      gen:() => genBorderTW(borders)                         },
+    { tab:"Shadows",      label:"shadows.tw.json",     name:"shadows.tw.json",     gen:() => genShadowsTW(shadows)                        },
+    { tab:"Z-Index",      label:"z-index.tw.json",     name:"z-index.tw.json",     gen:() => genZIndexTW(zindex)                          },
+    { tab:"Breakpoints",  label:"screens.tw.json",     name:"screens.tw.json",     gen:() => genBreakpointsTW(breakpoints)                },
+  ];
+
+  const allFiles = (fmt === "dtcg" ? dtcgFiles : fmt === "css" ? cssFiles : twFiles).filter(f => enabled.has(f.tab));
   const [checked, setChecked] = useState(() => new Set(allFiles.map(f => f.name)));
-  const allChecked = checked.size === allFiles.length;
+  const allChecked = allFiles.length > 0 && checked.size === allFiles.length;
   const toggle = (name: string) => setChecked(prev => { const next=new Set(prev); next.has(name)?next.delete(name):next.add(name); return next; });
   const toggleAll = () => setChecked(allChecked ? new Set() : new Set(allFiles.map(f => f.name)));
-  const downloadSelected = () => allFiles.filter(f => checked.has(f.name)).forEach(f => dlJSON(f.json(), f.name));
+  const downloadSelected = () => allFiles.filter(f => checked.has(f.name)).forEach(f => {
+    const content = f.gen();
+    f.name.endsWith(".css") ? dlText(content, f.name) : dlJSON(content, f.name);
+  });
+
+  const fmtBtnStyle = (active: boolean) => ({fontSize:11,padding:"5px 10px",borderRadius:5,border:"1px solid "+(active?"#4f46e5":"#333"),background:active?"#4f46e5":"transparent",color:active?"#fff":"#777",cursor:"pointer",fontWeight:active?600:400});
 
   return (
     <div style={{background:"#111118",border:"1px solid #2a2a3e",borderRadius:10,padding:16,minWidth:340,boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
-      <div style={{background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:7,padding:"10px 12px",marginBottom:12,fontSize:11,color:"#777",lineHeight:1.7}}>
+      {fmt === "dtcg" && <div style={{background:"#0a0a14",border:"1px solid #1e1e30",borderRadius:7,padding:"10px 12px",marginBottom:12,fontSize:11,color:"#777",lineHeight:1.7}}>
         <b style={{color:"#888"}}>How to import into Figma:</b><br />
         1. Open the Local Variables panel<br />
         2. Use the plugin's <b style={{color:"#a78bfa"}}>Import Variables</b> tab<br />
         3. For <b style={{color:"#a78bfa"}}>Text Styles</b>: ensure fonts are installed locally
+      </div>}
+      <div style={{display:"flex",gap:4,marginBottom:12}}>
+        <button onClick={()=>{setFmt("dtcg");setChecked(new Set());}} style={fmtBtnStyle(fmt==="dtcg")}>DTCG JSON</button>
+        <button onClick={()=>{setFmt("css");setChecked(new Set());}} style={fmtBtnStyle(fmt==="css")}>CSS Variables</button>
+        <button onClick={()=>{setFmt("tailwind");setChecked(new Set());}} style={fmtBtnStyle(fmt==="tailwind")}>Tailwind</button>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"7px 8px",marginBottom:4,borderRadius:6,background:"#0f0f1a",border:"1px solid #1e1e30"}}>
         <input type="checkbox" checked={allChecked} onChange={toggleAll} style={{accentColor:"#4f46e5",width:14,height:14,cursor:"pointer",flexShrink:0}} />
