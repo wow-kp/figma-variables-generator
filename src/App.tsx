@@ -380,6 +380,30 @@ function useDraggable(list: any[], setList: any) {
   const onDragEnd = useCallback(() => { dragId.current=null; overId.current=null; }, []);
   return { onDragStart, onDragOver, onDrop, onDragEnd };
 }
+const GROUP_DRAG_TYPE = "application/x-group-drag";
+function useGroupDrag(setList: any, mode: "string"|"id" = "string") {
+  const onDragStart = useCallback((e: React.DragEvent, key: string) => {
+    e.dataTransfer.setData(GROUP_DRAG_TYPE, key);
+    e.dataTransfer.effectAllowed = "move";
+    e.stopPropagation();
+  }, []);
+  const makeDropZone = useCallback((targetKey: string) => ({
+    onDragOver: (e: React.DragEvent) => { if (e.dataTransfer.types.includes(GROUP_DRAG_TYPE)) { e.preventDefault(); e.stopPropagation(); (e.currentTarget as HTMLElement).style.borderTop = "2px solid var(--accent)"; } },
+    onDragLeave: (e: React.DragEvent) => { (e.currentTarget as HTMLElement).style.borderTop = ""; },
+    onDrop: (e: React.DragEvent) => {
+      (e.currentTarget as HTMLElement).style.borderTop = "";
+      const fromKey = e.dataTransfer.getData(GROUP_DRAG_TYPE);
+      if (!fromKey || fromKey === targetKey) return;
+      e.preventDefault(); e.stopPropagation();
+      if (mode === "string") {
+        setList((prev: string[]) => { const f=prev.indexOf(fromKey), t=prev.indexOf(targetKey); if(f<0||t<0)return prev; const n=[...prev]; const[m]=n.splice(f,1); n.splice(t,0,m); return n; });
+      } else {
+        setList((prev: any[]) => { const f=prev.findIndex((i: any)=>String(i.id)===fromKey), t=prev.findIndex((i: any)=>String(i.id)===targetKey); if(f<0||t<0)return prev; const n=[...prev]; const[m]=n.splice(f,1); n.splice(t,0,m); return n; });
+      }
+    },
+  }), [setList, mode]);
+  return { onDragStart, makeDropZone };
+}
 const PREVIEW_TEXT = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
 const _measureCanvas = document.createElement("canvas");
 function measureTextWidth(text: string, font: string) {
@@ -747,6 +771,9 @@ export default function App() {
   const typWgtDrag     = useDraggable(typography.weights,     (l: any) => setTypography((t: any) => ({...t,weights:l})));
   const typLhDrag      = useDraggable(typography.lineHeights, (l: any) => setTypography((t: any) => ({...t,lineHeights:l})));
   const typoDragMap: any = { families:typFamDrag, sizes:typSizeDrag, weights:typWgtDrag, lineHeights:typLhDrag };
+  const primGroupDrag   = useGroupDrag(setPrimGroups, "id");
+  const colorGroupDrag  = useGroupDrag(setColorGroups, "string");
+  const tsGroupDrag     = useGroupDrag(setTsGroups, "string");
 
   const updateTextStyle = (id: number, field: string, val: string) =>
     setTextStyles(ts => ts.map(s => s.id===id ? {...s,[field]:val} : s));
@@ -1073,8 +1100,8 @@ export default function App() {
               <TabHeader title="Primitive Colors" description="Raw palette. Click a name to rename. Never apply directly to layers."
                 actions={tabActions(<button onClick={addPrimGroup} style={tabAddBtnStyle}>+ Add Palette</button>)} />
               {primGroups.map((g: any) => (
-                <div key={g.id} style={{marginBottom:32}}>
-                  <div style={hdrStyle}><InlineLabel value={g.label} prefix="primitives / " onCommit={(nl: string)=>renamePrimGroup(g.key,nl)} /><div style={{flex:1,height:1,background:"var(--border-section)"}} /><button onClick={()=>deletePrimGroup(g.key)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete palette</button></div>
+                <div key={g.id} {...primGroupDrag.makeDropZone(String(g.id))} style={{marginBottom:32}}>
+                  <div style={hdrStyle}><div draggable onDragStart={e=>primGroupDrag.onDragStart(e,String(g.id))} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div><InlineLabel value={g.label} prefix="primitives / " onCommit={(nl: string)=>renamePrimGroup(g.key,nl)} /><div style={{flex:1,height:1,background:"var(--border-section)"}} /><button onClick={()=>deletePrimGroup(g.key)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete palette</button></div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:12,alignItems:"flex-start"}}>
                     {g.shades.map((shade: string) => (
                       <div key={shade} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
@@ -1115,8 +1142,8 @@ export default function App() {
               <TabHeader title="Semantic Color Tokens" description="Downloads as two files: colors-light.json and colors-dark.json."
                 actions={tabActions(<button onClick={addColorGroup} style={tabAddBtnStyle}>+ Add Group</button>)} />
               {colorGroups.map((g: string) => (
-                <div key={g} style={{marginBottom:28}}>
-                  <div style={hdrStyle}><InlineLabel value={g} prefix="color / " onCommit={(n: string)=>renameColorGroup(g,n)} /><div style={{flex:1,height:1,background:"var(--border-section)"}} /><button onClick={()=>{const nn=g+" copy";setColorGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setColors(c=>[...c,...c.filter(i=>i.group===g).map(i=>({...i,id:uid(),group:nn}))]);}} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteColorGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button></div>
+                <div key={g} {...colorGroupDrag.makeDropZone(g)} style={{marginBottom:28}}>
+                  <div style={hdrStyle}><div draggable onDragStart={e=>colorGroupDrag.onDragStart(e,g)} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div><InlineLabel value={g} prefix="color / " onCommit={(n: string)=>renameColorGroup(g,n)} /><div style={{flex:1,height:1,background:"var(--border-section)"}} /><button onClick={()=>{const nn=g+" copy";setColorGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setColors(c=>[...c,...c.filter(i=>i.group===g).map(i=>({...i,id:uid(),group:nn}))]);}} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteColorGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button></div>
                   {groupedColors[g].length===0 && <div style={{fontSize:12,color:"var(--text-secondary)",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
                   {groupedColors[g].length > 0 && (
                     <div>
@@ -1216,8 +1243,9 @@ export default function App() {
                 actions={tabActions(<button onClick={addTsGroup} style={tabAddBtnStyle}>+ Add Group</button>)} />
 
               {tsGroups.map((g: string) => (
-                <div key={g} style={{marginBottom:32}}>
+                <div key={g} {...tsGroupDrag.makeDropZone(g)} style={{marginBottom:32}}>
                   <div style={hdrStyle}>
+                    <div draggable onDragStart={e=>tsGroupDrag.onDragStart(e,g)} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div>
                     <InlineLabel value={g} prefix="text / " onCommit={(n: string)=>renameTsGroup(g,n)} />
                     <div style={{flex:1,height:1,background:"var(--border-section)"}} />
                     <button onClick={()=>{const nn=g+" copy";setTsGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setTextStyles(ts=>[...ts,...ts.filter(s=>s.group===g).map(s=>({...s,id:uid(),group:nn,name:s.name+" copy"}))]);}} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteTsGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button>
@@ -1496,7 +1524,7 @@ export default function App() {
                   <button onClick={() => updateCustomGroup(cc.id, g.name, "locked", true)} style={{...tabAddBtnStyle,fontSize:10,padding:"4px 8px"}}>Save</button>
                 );
                 return (
-                  <div key={g.name} style={{marginBottom:28}}>
+                  <div key={g.name} onDragOver={!singleGroup ? (e: any)=>{ if(e.dataTransfer.types.includes(GROUP_DRAG_TYPE)){e.preventDefault();e.stopPropagation();(e.currentTarget as HTMLElement).style.borderTop="2px solid var(--accent)";}} : undefined} onDragLeave={!singleGroup ? (e: any)=>{(e.currentTarget as HTMLElement).style.borderTop="";} : undefined} onDrop={!singleGroup ? (e: any)=>{(e.currentTarget as HTMLElement).style.borderTop="";const from=e.dataTransfer.getData(GROUP_DRAG_TYPE);if(!from||from===g.name)return;e.preventDefault();e.stopPropagation();setCustomCollections(ccs=>ccs.map(c=>{if(c.id!==cc.id)return c;const gs=[...c.groups];const fi=gs.findIndex((x: any)=>x.name===from),ti=gs.findIndex((x: any)=>x.name===g.name);if(fi<0||ti<0)return c;const[m]=gs.splice(fi,1);gs.splice(ti,0,m);return{...c,groups:gs};}));} : undefined} style={{marginBottom:28}}>
                     {singleGroup ? (
                       <div style={{...hdrStyle,justifyContent:"space-between"}}>
                         <span style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Value Type</span>
@@ -1506,6 +1534,7 @@ export default function App() {
                       </div>
                     ) : (
                       <div style={hdrStyle}>
+                        <div draggable onDragStart={(e: any)=>{e.dataTransfer.setData(GROUP_DRAG_TYPE,g.name);e.dataTransfer.effectAllowed="move";e.stopPropagation();}} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div>
                         <InlineLabel value={g.name} prefix={cc.jsonKey + " / "} onCommit={(n: string) => renameCustomGroup(cc.id, g.name, n)} />
                         {valueTypeSelect}
                         {groupSaveEdit}

@@ -35,4 +35,4 @@ If you are developing a production application, we recommend using TypeScript wi
 
 8. ~~Dark/light theme toggle for the tool itself~~ ✅
 9. ~~Export to CSS variables / Tailwind config in addition to DTCG JSON~~ ✅
-10. Drag-and-drop reorder for groups, not just rows
+10. ~~Drag-and-drop reorder for groups, not just rows~~ ✅
