@@ -190,7 +190,7 @@ const defaultColors = [
   {id:30,group:"overlay", name:"scrim",          light:"rgba(0,0,0,0.5)",         dark:"rgba(0,0,0,0.7)",         description:"Modal backdrop"},
 ];
 const defaultSpacing     = [{id:1,name:"0",value:"0"},{id:2,name:"px",value:"1"},{id:3,name:"0-5",value:"2"},{id:4,name:"1",value:"4"},{id:5,name:"1-5",value:"6"},{id:6,name:"2",value:"8"},{id:7,name:"2-5",value:"10"},{id:8,name:"3",value:"12"},{id:9,name:"4",value:"16"},{id:10,name:"5",value:"20"},{id:11,name:"6",value:"24"},{id:12,name:"8",value:"32"},{id:13,name:"10",value:"40"},{id:14,name:"12",value:"48"},{id:15,name:"16",value:"64"},{id:16,name:"20",value:"80"},{id:17,name:"24",value:"96"},{id:18,name:"32",value:"128"}];
-const defaultTypography  = { families:[{id:1,name:"sans",value:"Inter, system-ui, sans-serif"},{id:2,name:"mono",value:"'Fira Code', monospace"}], sizes:[{id:1,name:"xs",value:"12"},{id:2,name:"sm",value:"14"},{id:3,name:"base",value:"16"},{id:4,name:"lg",value:"18"},{id:5,name:"xl",value:"20"},{id:6,name:"2xl",value:"24"},{id:7,name:"3xl",value:"30"},{id:8,name:"4xl",value:"36"},{id:9,name:"5xl",value:"48"},{id:10,name:"6xl",value:"60"}], weights:[{id:1,name:"regular",value:"400"},{id:2,name:"medium",value:"500"},{id:3,name:"semibold",value:"600"},{id:4,name:"bold",value:"700"}], lineHeights:[{id:1,name:"tight",value:"1.25"},{id:2,name:"snug",value:"1.375"},{id:3,name:"normal",value:"1.5"},{id:4,name:"relaxed",value:"1.625"},{id:5,name:"loose",value:"2"}] };
+const defaultTypography  = { families:[{id:101,name:"sans",value:"Inter, system-ui, sans-serif"},{id:102,name:"mono",value:"'Fira Code', monospace"}], sizes:[{id:201,name:"xs",value:"12"},{id:202,name:"sm",value:"14"},{id:203,name:"base",value:"16"},{id:204,name:"lg",value:"18"},{id:205,name:"xl",value:"20"},{id:206,name:"2xl",value:"24"},{id:207,name:"3xl",value:"30"},{id:208,name:"4xl",value:"36"},{id:209,name:"5xl",value:"48"},{id:210,name:"6xl",value:"60"}], weights:[{id:301,name:"regular",value:"400"},{id:302,name:"medium",value:"500"},{id:303,name:"semibold",value:"600"},{id:304,name:"bold",value:"700"}], lineHeights:[{id:401,name:"tight",value:"1.25"},{id:402,name:"snug",value:"1.375"},{id:403,name:"normal",value:"1.5"},{id:404,name:"relaxed",value:"1.625"},{id:405,name:"loose",value:"2"}] };
 const defaultRadius      = [{id:1,name:"none",value:"0"},{id:2,name:"sm",value:"4"},{id:3,name:"md",value:"6"},{id:4,name:"lg",value:"8"},{id:5,name:"xl",value:"12"},{id:6,name:"2xl",value:"16"},{id:7,name:"3xl",value:"24"},{id:8,name:"full",value:"9999"}];
 const defaultBorders     = [{id:1,name:"none",value:"0"},{id:2,name:"thin",value:"1"},{id:3,name:"default",value:"2"},{id:4,name:"thick",value:"4"}];
 const defaultShadows     = [{id:1,name:"xs",value:"0px 1px 3px 0px rgba(0,0,0,0.18)"},{id:2,name:"sm",value:"0px 2px 6px 0px rgba(0,0,0,0.20)"},{id:3,name:"md",value:"0px 4px 12px 0px rgba(0,0,0,0.22)"},{id:4,name:"lg",value:"0px 8px 24px 0px rgba(0,0,0,0.24)"},{id:5,name:"xl",value:"0px 16px 40px 0px rgba(0,0,0,0.26)"},{id:6,name:"2xl",value:"0px 24px 64px 0px rgba(0,0,0,0.30)"}];
@@ -205,6 +205,7 @@ const inp = (extra: any={}) => ({background:"#1a1a2e",border:"1px solid #333",bo
 const delBtn: any = {background:"none",border:"none",color:"#f87171",cursor:"pointer"};
 const dupBtn: any = {background:"none",border:"none",color:"#777",cursor:"pointer",fontSize:14,padding:0,lineHeight:1,title:"Duplicate"};
 const rowBase: any = {padding:"8px 0",borderBottom:"1px solid #14141e"};
+const colHdr: any = {display:"flex",alignItems:"center",gap:8,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4,paddingLeft:10};
 const hdrStyle: any = {fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em",color:"#777",padding:"10px 0 6px",display:"flex",alignItems:"center",gap:8};
 
 // ── Shared components ─────────────────────────────────────────────────────────
@@ -260,7 +261,8 @@ function TextPreview({ style }: any) {
   );
 }
 
-function DraggableRow({ id, dragHandlers, children }: any) {
+const chkStyle: any = {accentColor:"#4f46e5",width:14,height:14,cursor:"pointer",flexShrink:0};
+function DraggableRow({ id, dragHandlers, children, checked, onCheck }: any) {
   const [over, setOver] = useState(false), [hov, setHov] = useState(false);
   return (
     <div draggable={hov}
@@ -269,7 +271,8 @@ function DraggableRow({ id, dragHandlers, children }: any) {
       onDragLeave={() => setOver(false)}
       onDrop={() => { dragHandlers.onDrop(); setOver(false); }}
       onDragEnd={() => { dragHandlers.onDragEnd(); setOver(false); }}
-      style={{...rowBase,background:over?"#1a1a3a":"transparent",borderLeft:over?"2px solid #4f46e5":"2px solid transparent",paddingLeft:over?6:8,cursor:hov?"grab":"default",display:"flex",alignItems:"center",gap:8}}>
+      style={{...rowBase,background:over?"#1a1a3a":checked?"#1a1a30":"transparent",borderLeft:over?"2px solid #4f46e5":"2px solid transparent",paddingLeft:over?6:8,cursor:hov?"grab":"default",display:"flex",alignItems:"center",gap:8}}>
+      {onCheck !== undefined && <input type="checkbox" checked={!!checked} onChange={()=>onCheck(id)} style={chkStyle} />}
       <DragHandle onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} />
       <div style={{flex:1}}>{children}</div>
     </div>
@@ -319,9 +322,9 @@ function ShadowPicker({ value, onChange }: any) {
   const p=parseShadow(value), set=(field: string,val: any)=>onChange(buildShadow({...p,[field]:val}));
   return <div style={{display:"flex",gap:20,alignItems:"center",background:"#0f0f1a",border:"1px solid #2a2a3e",borderRadius:10,padding:"16px 20px",margin:"4px 0 10px 0"}}><div style={{width:110,height:90,background:"#c8cad8",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><div style={{width:64,height:44,borderRadius:7,background:"#ffffff",boxShadow:value}} /></div><div style={{flex:1,display:"flex",flexDirection:"column",gap:9}}><ShadowSlider label="X offset" value={p.x} min={-80} max={80} onChange={(v: any)=>set("x",v)} /><ShadowSlider label="Y offset" value={p.y} min={-80} max={80} onChange={(v: any)=>set("y",v)} /><ShadowSlider label="Blur" value={p.blur} min={0} max={120} onChange={(v: any)=>set("blur",v)} /><ShadowSlider label="Spread" value={p.spread} min={-40} max={60} onChange={(v: any)=>set("spread",v)} /><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:"#777",width:52,flexShrink:0}}>Color</span><input value={p.color} onChange={e=>set("color",e.target.value)} style={inp({flex:1,fontFamily:"monospace",fontSize:11,padding:"5px 8px"})} /><label style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#888",cursor:"pointer",flexShrink:0,userSelect:"none"}}><input type="checkbox" checked={p.inset} onChange={e=>set("inset",e.target.checked)} style={{accentColor:"#4f46e5"}} />inset</label></div></div></div>;
 }
-function ShadowRow({ sh, dragHandlers, onChangeName, onChangeValue, onDelete, onDuplicate }: any) {
+function ShadowRow({ sh, dragHandlers, onChangeName, onChangeValue, onDelete, onDuplicate, checked, onCheck }: any) {
   const [open,setOpen]=useState(false), [hov,setHov]=useState(false);
-  return <div style={{borderBottom:"1px solid #14141e"}}><div draggable onDragStart={()=>dragHandlers.onDragStart(sh.id)} onDragOver={(e: any)=>dragHandlers.onDragOver(e,sh.id)} onDrop={()=>dragHandlers.onDrop()} onDragEnd={()=>dragHandlers.onDragEnd()} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0 8px 8px",cursor:hov?"grab":"default"}}><DragHandle onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} /><span style={{fontSize:12,color:"#777",flexShrink:0,width:72}}>shadow /</span><input value={sh.name} onChange={e=>onChangeName(e.target.value)} style={inp({width:140,flexShrink:0})} /><input value={sh.value} onChange={e=>onChangeValue(e.target.value)} style={inp({flex:1,fontFamily:"monospace",fontSize:12,minWidth:0})} /><ShadowSwatch value={sh.value} active={open} onClick={()=>setOpen((o: boolean)=>!o)} /><button onClick={onDuplicate} style={dupBtn}>⧉</button><button onClick={onDelete} style={{...delBtn,fontSize:18,flexShrink:0}}>x</button></div>{open && <ShadowPicker value={sh.value} onChange={onChangeValue} />}</div>;
+  return <div style={{borderBottom:"1px solid #14141e"}}><div draggable onDragStart={()=>dragHandlers.onDragStart(sh.id)} onDragOver={(e: any)=>dragHandlers.onDragOver(e,sh.id)} onDrop={()=>dragHandlers.onDrop()} onDragEnd={()=>dragHandlers.onDragEnd()} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0 8px 8px",cursor:hov?"grab":"default",background:checked?"#1a1a30":"transparent"}}>{onCheck !== undefined && <input type="checkbox" checked={!!checked} onChange={()=>onCheck(sh.id)} style={chkStyle} />}<DragHandle onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} /><span style={{fontSize:12,color:"#777",flexShrink:0,width:72}}>shadow /</span><input value={sh.name} onChange={e=>onChangeName(e.target.value)} style={inp({width:140,flexShrink:0})} /><input value={sh.value} onChange={e=>onChangeValue(e.target.value)} style={inp({flex:1,fontFamily:"monospace",fontSize:12,minWidth:0})} /><ShadowSwatch value={sh.value} active={open} onClick={()=>setOpen((o: boolean)=>!o)} /><button onClick={onDuplicate} style={dupBtn}>⧉</button><button onClick={onDelete} style={{...delBtn,fontSize:18,flexShrink:0}}>x</button></div>{open && <ShadowPicker value={sh.value} onChange={onChangeValue} />}</div>;
 }
 
 // ── Download panel ────────────────────────────────────────────────────────────
@@ -406,7 +409,18 @@ export default function App() {
   const [copied,           setCopied]           = useState(false);
   const [importError,      setImportError]      = useState("");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const fileRef = useRef<any>();
+
+  const toggleSelect = useCallback((id: number) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }), []);
+  const toggleSelectAll = useCallback((ids: number[]) => setSelected(prev => {
+    const n = new Set(prev); const all = ids.every(id => n.has(id));
+    ids.forEach(id => all ? n.delete(id) : n.add(id)); return n;
+  }), []);
+  const selectAllChk = (ids: number[]) => {
+    const all = ids.length > 0 && ids.every(id => selected.has(id));
+    return <input type="checkbox" checked={all} onChange={() => toggleSelectAll(ids)} style={chkStyle} />;
+  };
 
   // ── Undo / Redo ──────────────────────────────────────────────────────────────
   const historyRef = useRef<any[]>([]);
@@ -466,6 +480,7 @@ export default function App() {
         e.preventDefault();
         if (e.shiftKey) redo(); else undo();
       }
+      if (e.key === "Escape") setSelected(new Set());
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -697,6 +712,33 @@ export default function App() {
 
   const TS_DECORATION_OPTIONS = ["NONE","UNDERLINE","STRIKETHROUGH"];
 
+  // ── Bulk actions ─────────────────────────────────────────────────────────────
+  const bulkDelete = () => {
+    const ids = selected;
+    if (tab==="Colors")      setColors(c=>c.filter(i=>!ids.has(i.id)));
+    else if (tab==="Spacing")     setSpacing(s=>s.filter(i=>!ids.has(i.id)));
+    else if (tab==="Typography")  setTypography((t: any)=>({...t,families:t.families.filter((i: any)=>!ids.has(i.id)),sizes:t.sizes.filter((i: any)=>!ids.has(i.id)),weights:t.weights.filter((i: any)=>!ids.has(i.id)),lineHeights:t.lineHeights.filter((i: any)=>!ids.has(i.id))}));
+    else if (tab==="Text Styles") setTextStyles(ts=>ts.filter(s=>!ids.has(s.id)));
+    else if (tab==="Radius")      setRadius(r=>r.filter(i=>!ids.has(i.id)));
+    else if (tab==="Border")      setBorders(b=>b.filter(i=>!ids.has(i.id)));
+    else if (tab==="Shadows")     setShadows(s=>s.filter(i=>!ids.has(i.id)));
+    else if (tab==="Z-Index")     setZIndex(z=>z.filter(i=>!ids.has(i.id)));
+    else if (tab==="Breakpoints") setBreakpoints(b=>b.filter(i=>!ids.has(i.id)));
+    else { const cc=customCollections.find(c=>c.name===tab); if(cc) setCustomCollections(ccs=>ccs.map(c=>c.id===cc.id?{...c,items:c.items.filter((i: any)=>!ids.has(i.id))}:c)); }
+    setSelected(new Set());
+  };
+  const bulkApply = (field: string, value: any) => {
+    const ids = selected;
+    if (tab==="Colors")      setColors(c=>c.map(i=>ids.has(i.id)?{...i,[field]:value}:i));
+    else if (tab==="Text Styles") setTextStyles(ts=>ts.map(s=>ids.has(s.id)?{...s,[field]:value}:s));
+    else if (tab==="Spacing")     setSpacing(s=>s.map(i=>ids.has(i.id)?{...i,[field]:value}:i));
+    else if (tab==="Radius")      setRadius(r=>r.map(i=>ids.has(i.id)?{...i,[field]:value}:i));
+    else if (tab==="Border")      setBorders(b=>b.map(i=>ids.has(i.id)?{...i,[field]:value}:i));
+    else if (tab==="Z-Index")     setZIndex(z=>z.map(i=>ids.has(i.id)?{...i,[field]:value}:i));
+    else if (tab==="Breakpoints") setBreakpoints(b=>b.map(i=>ids.has(i.id)?{...i,[field]:value}:i));
+    else { const cc=customCollections.find(c=>c.name===tab); if(cc) setCustomCollections(ccs=>ccs.map(c=>c.id===cc.id?{...c,items:c.items.map((i: any)=>ids.has(i.id)?{...i,[field]:value}:i)}:c)); }
+  };
+
   const FONT_FAMILIES = [
     {label:"Inter", value:"Inter, sans-serif"},
     {label:"Roboto", value:"Roboto, sans-serif"},
@@ -828,7 +870,7 @@ export default function App() {
                     const unlocked = curr.groups?.some((gr: any) => gr.locked === false);
                     if (unlocked) setCustomCollections(ccs => ccs.map(c => c.id !== curr.id ? c : { ...c, groups: c.groups.map((gr: any) => ({ ...gr, locked: true })) }));
                   }
-                  setTab(t);setTabResetConfirm(false);
+                  setTab(t);setTabResetConfirm(false);setSelected(new Set());
                 }} style={{flex:1,textAlign:"left",padding:"10px 14px",fontSize:13,fontWeight:active?600:400,cursor:"pointer",border:"none",background:active?"#4f46e5":"transparent",color:active?"#fff":enabled?"#777":"#444",transition:"all 0.15s"}}>{t}</button>
                 <div onClick={()=>toggleTab(t)} title={enabled?"Exclude from export":"Include in export"} style={{width:36,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,paddingRight:10,paddingLeft:4,alignSelf:"stretch"}}>
                   <div style={{width:24,height:14,borderRadius:9999,background:enabled?"#4f46e5":"#2a2a3a",border:"1px solid "+(enabled?"#4f46e5":"#444"),position:"relative"}}>
@@ -897,11 +939,15 @@ export default function App() {
                   {groupedColors[g].length===0 && <div style={{fontSize:12,color:"#777",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
                   {groupedColors[g].length > 0 && (
                     <div>
-                      <div style={{display:"grid",gridTemplateColumns:"28px 110px 150px 1fr 1fr 32px",gap:10,padding:"4px 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                        {["","Group","Name","Light","Dark",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                      <div style={colHdr}>
+                        {selectAllChk(groupedColors[g].map((c: any)=>c.id))}
+                        <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
+                        <div style={{flex:1,display:"grid",gridTemplateColumns:"110px 150px 1fr 1fr 32px",gap:10}}>
+                        {["Group","Name","Light","Dark",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                        </div>
                       </div>
                       {groupedColors[g].map((c: any) => (
-                        <DraggableRow key={c.id} id={c.id} dragHandlers={colorDrag}>
+                        <DraggableRow key={c.id} id={c.id} dragHandlers={colorDrag} checked={selected.has(c.id)} onCheck={toggleSelect}>
                           <div style={{display:"grid",gridTemplateColumns:"110px 150px 1fr 1fr 32px",gap:10,alignItems:"start"}}>
                             <select value={c.group} onChange={e=>updateColor(c.id,"group",e.target.value)} style={inp({width:"100%"})}>{colorGroups.map((g2: string)=><option key={g2}>{g2}</option>)}</select>
                             <div><input value={c.name} onChange={e=>updateColor(c.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} /><input value={c.description} onChange={e=>updateColor(c.id,"description",e.target.value)} placeholder="Description" style={inp({width:"100%",boxSizing:"border-box",marginTop:6,fontSize:11,color:"#777",padding:"6px 10px",border:"1px solid #222"})} /></div>
@@ -923,11 +969,15 @@ export default function App() {
           {tab==="Spacing" && (
             <div>
               <TabHeader title="Spacing Tokens" description="4px base scale. Drag to reorder." actions={tabActions()} />
-              <div style={{display:"grid",gridTemplateColumns:"28px 80px 160px 160px 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                {["","Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+              <div style={colHdr}>
+                {selectAllChk(spacing.map((s: any)=>s.id))}
+                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"80px 160px 160px 1fr 32px",gap:10}}>
+                {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                </div>
               </div>
               {spacing.map((sp: any) => (
-                <DraggableRow key={sp.id} id={sp.id} dragHandlers={spacingDrag}>
+                <DraggableRow key={sp.id} id={sp.id} dragHandlers={spacingDrag} checked={selected.has(sp.id)} onCheck={toggleSelect}>
                   <div style={{display:"grid",gridTemplateColumns:"80px 160px 160px 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"#777"}}>spacing /</span>
                     <input value={sp.name} onChange={e=>updateList(setSpacing,sp.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
@@ -948,11 +998,15 @@ export default function App() {
               {[["families","font / family",""],["sizes","font / size","px"],["weights","font / weight",""],["lineHeights","font / line-height",""]].map(([key,label,unit]) => (
                 <div key={key} style={{marginBottom:28}}>
                   <div style={{marginBottom:8}}><span style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em",color:"#777"}}>{label} — drag to reorder</span></div>
-                  <div style={{display:"grid",gridTemplateColumns:"28px 180px 1fr 32px",gap:10,padding:"0 0 6px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                    {["","Name","Value",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                  <div style={colHdr}>
+                    {selectAllChk((typography as any)[key].map((i: any)=>i.id))}
+                    <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
+                    <div style={{flex:1,display:"grid",gridTemplateColumns:"180px 1fr 32px",gap:10}}>
+                    {["Name","Value",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                    </div>
                   </div>
                   {(typography as any)[key].map((item: any) => (
-                    <DraggableRow key={item.id} id={item.id} dragHandlers={typoDragMap[key]}>
+                    <DraggableRow key={item.id} id={item.id} dragHandlers={typoDragMap[key]} checked={selected.has(item.id)} onCheck={toggleSelect}>
                       <div style={{display:"grid",gridTemplateColumns:"180px 1fr 32px",gap:10,alignItems:"center"}}>
                         <input value={item.name} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,name:e.target.value}:i)}))} style={inp()} />
                         <div style={{display:"flex",gap:6,alignItems:"center"}}>{key==="families" ? (
@@ -989,12 +1043,16 @@ export default function App() {
                   </div>
 
                   {/* Column headers */}
-                  <div style={{display:"grid",gridTemplateColumns:"28px 100px 180px 54px 60px 64px 64px 64px 110px minmax(80px,1fr) 32px",gap:8,padding:"4px 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4,alignItems:"center"}}>
-                    {["","Name","Font Family","Size","Weight","L.Height","L.Space","P.Space","Decoration","Preview",""].map((h,i)=><div key={i} style={{fontSize:10,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                  <div style={colHdr}>
+                    {selectAllChk((groupedTextStyles[g]||[]).map((s: any)=>s.id))}
+                    <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
+                    <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 180px 54px 60px 64px 64px 64px 110px minmax(80px,1fr) 32px",gap:8}}>
+                    {["Name","Font Family","Size","Weight","L.Height","L.Space","P.Space","Decoration","Preview",""].map((h,i)=><div key={i} style={{fontSize:10,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                    </div>
                   </div>
 
                   {groupedTextStyles[g] && groupedTextStyles[g].map((s: any) => (
-                    <DraggableRow key={s.id} id={s.id} dragHandlers={textStylesDrag}>
+                    <DraggableRow key={s.id} id={s.id} dragHandlers={textStylesDrag} checked={selected.has(s.id)} onCheck={toggleSelect}>
                       <div style={{display:"grid",gridTemplateColumns:"100px 180px 54px 60px 64px 64px 64px 110px minmax(80px,1fr) 32px",gap:8,alignItems:"center"}}>
 
                         {/* Name */}
@@ -1053,9 +1111,11 @@ export default function App() {
           {tab==="Radius" && (
             <div>
               <TabHeader title="Border Radius Tokens" description="Drag to reorder." actions={tabActions()} />
+              <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 0 8px 8px"}}>{selectAllChk(radius.map((r: any)=>r.id))}<span style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>Select all</span></div>
               <div style={{display:"flex",flexWrap:"wrap",gap:20,paddingLeft:8}}>
                 {radius.map((r: any) => (
-                  <div key={r.id} draggable onDragStart={()=>radiusDrag.onDragStart(r.id)} onDragOver={(e: any)=>radiusDrag.onDragOver(e,r.id)} onDrop={()=>radiusDrag.onDrop()} onDragEnd={()=>radiusDrag.onDragEnd()} style={{background:"#111118",border:"1px solid #222230",borderRadius:12,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",gap:14,width:120,boxSizing:"border-box",cursor:"grab"}}>
+                  <div key={r.id} draggable onDragStart={()=>radiusDrag.onDragStart(r.id)} onDragOver={(e: any)=>radiusDrag.onDragOver(e,r.id)} onDrop={()=>radiusDrag.onDrop()} onDragEnd={()=>radiusDrag.onDragEnd()} style={{background:selected.has(r.id)?"#1a1a30":"#111118",border:"1px solid "+(selected.has(r.id)?"#4f46e5":"#222230"),borderRadius:12,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",gap:14,width:120,boxSizing:"border-box",cursor:"grab",position:"relative"}}>
+                    <input type="checkbox" checked={selected.has(r.id)} onChange={()=>toggleSelect(r.id)} style={{...chkStyle,position:"absolute",top:8,left:8}} />
                     <div style={{width:60,height:60,background:"#4f46e5",opacity:0.75,borderRadius:Math.min(parseInt(r.value)||0,30)+"px",flexShrink:0}} />
                     <input value={r.name} onChange={e=>updateList(setRadius,r.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",textAlign:"center",padding:"7px 8px"})} />
                     <div style={{display:"flex",gap:6,alignItems:"center",width:"100%"}}><input value={r.value} onChange={e=>updateList(setRadius,r.id,"value",e.target.value)} style={inp({flex:1,width:0,textAlign:"center",fontFamily:"monospace",padding:"7px 8px"})} /><span style={{fontSize:12,color:"#777",flexShrink:0}}>px</span></div>
@@ -1071,11 +1131,15 @@ export default function App() {
           {tab==="Border" && (
             <div>
               <TabHeader title="Border Width Tokens" description="Drag to reorder." actions={tabActions()} />
-              <div style={{display:"grid",gridTemplateColumns:"28px 80px 160px 160px 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                {["","Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+              <div style={colHdr}>
+                {selectAllChk(borders.map((b: any)=>b.id))}
+                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"80px 160px 160px 1fr 32px",gap:10}}>
+                {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                </div>
               </div>
               {borders.map((b: any) => (
-                <DraggableRow key={b.id} id={b.id} dragHandlers={borderDrag}>
+                <DraggableRow key={b.id} id={b.id} dragHandlers={borderDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
                   <div style={{display:"grid",gridTemplateColumns:"80px 160px 160px 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"#777"}}>border /</span>
                     <input value={b.name} onChange={e=>updateList(setBorders,b.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
@@ -1093,15 +1157,22 @@ export default function App() {
           {tab==="Shadows" && (
             <div>
               <TabHeader title="Shadow Tokens" description="Drag to reorder. Click the swatch to open the shadow picker." actions={tabActions()} />
-              <div style={{display:"grid",gridTemplateColumns:"38px 72px 140px 1fr 80px 32px",gap:10,padding:"0 0 8px 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                {["","Prefix","Name","Value","Preview",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+              <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 0 8px 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
+                {selectAllChk(shadows.map((s: any)=>s.id))}
+                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
+                <span style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase",flexShrink:0,width:72}}>Prefix</span>
+                <span style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase",flexShrink:0,width:140}}>Name</span>
+                <span style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase",flex:1}}>Value</span>
+                <span style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase",flexShrink:0,width:80}}>Preview</span>
+                <span style={{flexShrink:0,width:32}}></span>
               </div>
               {shadows.map((sh: any) => (
                 <ShadowRow key={sh.id} sh={sh} dragHandlers={shadowDrag}
                   onChangeName={(v: string)=>updateList(setShadows,sh.id,"name",v)}
                   onChangeValue={(v: string)=>updateList(setShadows,sh.id,"value",v)}
                   onDelete={()=>deleteList(setShadows,sh.id)}
-                  onDuplicate={()=>dupInList(setShadows,sh.id)} />
+                  onDuplicate={()=>dupInList(setShadows,sh.id)}
+                  checked={selected.has(sh.id)} onCheck={toggleSelect} />
               ))}
               <AddRowBtn onClick={()=>setShadows((s: any[])=>[...s,{id:uid(),name:"new",value:"0px 4px 12px 0px rgba(0,0,0,0.20)"}])} label="+ Add shadow token" />
             </div>
@@ -1111,11 +1182,15 @@ export default function App() {
           {tab==="Z-Index" && (
             <div>
               <TabHeader title="Z-Index Tokens" description="Stacking order reference. Drag to reorder." actions={tabActions()} />
-              <div style={{display:"grid",gridTemplateColumns:"28px 100px 180px 180px 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                {["","Prefix","Name","Value","",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+              <div style={colHdr}>
+                {selectAllChk(zindex.map((z: any)=>z.id))}
+                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 180px 180px 1fr 32px",gap:10}}>
+                {["Prefix","Name","Value","",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                </div>
               </div>
               {zindex.map((z: any) => (
-                <DraggableRow key={z.id} id={z.id} dragHandlers={zDrag}>
+                <DraggableRow key={z.id} id={z.id} dragHandlers={zDrag} checked={selected.has(z.id)} onCheck={toggleSelect}>
                   <div style={{display:"grid",gridTemplateColumns:"100px 180px 180px 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"#777"}}>z-index /</span>
                     <input value={z.name} onChange={e=>updateList(setZIndex,z.id,"name",e.target.value)} style={inp()} />
@@ -1132,11 +1207,15 @@ export default function App() {
           {tab==="Breakpoints" && (
             <div>
               <TabHeader title="Breakpoint Tokens" description="Min-width based. Drag to reorder." actions={tabActions()} />
-              <div style={{display:"grid",gridTemplateColumns:"28px 100px 140px 140px 140px 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                {["","Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+              <div style={colHdr}>
+                {selectAllChk(breakpoints.map((b: any)=>b.id))}
+                <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 140px 140px 140px 1fr 32px",gap:10}}>
+                {["Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                </div>
               </div>
               {breakpoints.map((b: any, idx: number) => (
-                <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag}>
+                <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
                   <div style={{display:"grid",gridTemplateColumns:"100px 140px 140px 140px 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"#777"}}>breakpoint /</span>
                     <input value={b.name} onChange={e=>updateList(setBreakpoints,b.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
@@ -1256,11 +1335,15 @@ export default function App() {
                     {groupItems.length === 0 && <div style={{fontSize:12,color:"#777",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
                     {groupItems.length > 0 && (
                       <div>
-                        <div style={{display:"grid",gridTemplateColumns:"28px 1fr 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
-                          {["","Name","Value",""].map((h,i) => <div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                        <div style={colHdr}>
+                          {selectAllChk(groupItems.map((i: any)=>i.id))}
+                          <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
+                          <div style={{flex:1,display:"grid",gridTemplateColumns:"1fr 1fr 32px",gap:10}}>
+                          {["Name","Value",""].map((h,i) => <div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                          </div>
                         </div>
                         {groupItems.map((item: any) => (
-                          <DraggableRow key={item.id} id={item.id} dragHandlers={{
+                          <DraggableRow key={item.id} id={item.id} checked={selected.has(item.id)} onCheck={toggleSelect} dragHandlers={{
                             onDragStart: (id: number) => { (cc as any)._dragId = id; },
                             onDragOver: (e: any, id: number) => { e.preventDefault(); (cc as any)._overId = id; },
                             onDrop: () => {
@@ -1306,6 +1389,30 @@ export default function App() {
               })}
             </div>
           ))}
+
+          {/* Bulk action bar */}
+          {selected.size > 0 && (
+            <div style={{position:"fixed",bottom:0,left:161,right:0,background:"#1a1a2e",border:"1px solid #4f46e5",borderRadius:"10px 10px 0 0",padding:"10px 16px",display:"flex",alignItems:"center",gap:10,boxShadow:"0 -4px 24px rgba(0,0,0,0.5)",zIndex:1000,flexWrap:"wrap"}}>
+              <span style={{fontSize:13,fontWeight:600,color:"#a5b4fc",flexShrink:0}}>{selected.size} selected</span>
+              <div style={{width:1,height:20,background:"#333",flexShrink:0}} />
+              {(tab==="Colors") && <>
+                <label style={{fontSize:11,color:"#777",display:"flex",gap:4,alignItems:"center"}}>Group <select onChange={e=>{if(e.target.value)bulkApply("group",e.target.value);e.target.value="";}} style={inp({width:100,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{colorGroups.map(g=><option key={g} value={g}>{g}</option>)}</select></label>
+              </>}
+              {(tab==="Text Styles") && <>
+                <label style={{fontSize:11,color:"#777",display:"flex",gap:4,alignItems:"center"}}>Font <select onChange={e=>{if(e.target.value)bulkApply("fontFamily",e.target.value);e.target.value="";}} style={inp({width:130,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{FONT_FAMILIES.map(f=><option key={f.value} value={f.value}>{f.label}</option>)}</select></label>
+                <label style={{fontSize:11,color:"#777",display:"flex",gap:4,alignItems:"center"}}>Size <input type="number" min="1" placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("fontSize",(e.target as any).value);(e.target as any).value="";}}} style={inp({width:50,fontSize:11,padding:"4px 6px"})} /></label>
+                <label style={{fontSize:11,color:"#777",display:"flex",gap:4,alignItems:"center"}}>Weight <select onChange={e=>{if(e.target.value)bulkApply("fontWeight",e.target.value);e.target.value="";}} style={inp({width:70,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{["100","200","300","400","500","600","700","800","900"].map(w=><option key={w} value={w}>{w}</option>)}</select></label>
+                <label style={{fontSize:11,color:"#777",display:"flex",gap:4,alignItems:"center"}}>L.Height <input placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("lineHeight",(e.target as any).value);(e.target as any).value="";}}} style={inp({width:50,fontSize:11,padding:"4px 6px"})} /></label>
+                <label style={{fontSize:11,color:"#777",display:"flex",gap:4,alignItems:"center"}}>L.Space <input placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("letterSpacing",(e.target as any).value);(e.target as any).value="";}}} style={inp({width:50,fontSize:11,padding:"4px 6px"})} /></label>
+                <label style={{fontSize:11,color:"#777",display:"flex",gap:4,alignItems:"center"}}>P.Space <input placeholder="—" onKeyDown={e=>{if(e.key==="Enter"&&(e.target as any).value){bulkApply("paragraphSpacing",(e.target as any).value);(e.target as any).value="";}}} style={inp({width:50,fontSize:11,padding:"4px 6px"})} /></label>
+                <label style={{fontSize:11,color:"#777",display:"flex",gap:4,alignItems:"center"}}>Decoration <select onChange={e=>{if(e.target.value)bulkApply("textDecoration",e.target.value);e.target.value="";}} style={inp({width:100,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{["NONE","UNDERLINE","STRIKETHROUGH"].map(d=><option key={d} value={d}>{d}</option>)}</select></label>
+                <label style={{fontSize:11,color:"#777",display:"flex",gap:4,alignItems:"center"}}>Group <select onChange={e=>{if(e.target.value)bulkApply("group",e.target.value);e.target.value="";}} style={inp({width:100,fontSize:11,padding:"4px 6px"})}><option value="">—</option>{tsGroups.map(g=><option key={g} value={g}>{g}</option>)}</select></label>
+              </>}
+              <div style={{flex:1}} />
+              <button onClick={bulkDelete} style={{fontSize:12,padding:"5px 10px",borderRadius:5,border:"1px solid #7f1d1d",background:"#1a0a0a",color:"#f87171",cursor:"pointer"}}>Delete</button>
+              <button onClick={()=>setSelected(new Set())} style={{fontSize:12,padding:"5px 10px",borderRadius:5,border:"1px solid #333",background:"transparent",color:"#777",cursor:"pointer"}}>Clear (Esc)</button>
+            </div>
+          )}
 
         </div>
 
