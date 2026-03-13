@@ -904,10 +904,37 @@ export default function App() {
           });
           if(ts.length){setTextStyles(ts);setTsGroups(grps);} else setImportError("No text styles found in file.");
         }
-        else if (tab==="Typography") { setImportError("Typography import not yet supported."); }
-        else if (tab==="Shadows") { setImportError("Shadows import not yet supported."); }
-        else if (tab==="Z-Index") { setImportError("Z-Index import not yet supported."); }
-        else if (tab==="Breakpoints") { setImportError("Breakpoints import not yet supported."); }
+        else if (tab==="Typography") {
+          const fam: any[]=[], sz: any[]=[], wt: any[]=[], lh: any[]=[]; let id=5000;
+          const src = data.family || data.font?.family;
+          if(src) Object.entries(src).forEach(([n,t]: any)=>{if(t["$value"])fam.push({id:id++,name:n,value:typeof t["$value"]==="object"?String(t["$value"].value):String(t["$value"])});});
+          const srcSz = data.size || data.font?.size;
+          if(srcSz) Object.entries(srcSz).forEach(([n,t]: any)=>{if(t["$value"]!=null)sz.push({id:id++,name:n,value:String(typeof t["$value"]==="object"?t["$value"].value:t["$value"]).replace("px","")});});
+          const srcWt = data.weight || data.font?.weight;
+          if(srcWt) Object.entries(srcWt).forEach(([n,t]: any)=>{if(t["$value"]!=null)wt.push({id:id++,name:n,value:String(t["$value"])});});
+          const srcLh = data["line-height"] || data.font?.["line-height"];
+          if(srcLh) Object.entries(srcLh).forEach(([n,t]: any)=>{if(t["$value"]!=null)lh.push({id:id++,name:n,value:String(t["$value"])});});
+          if(fam.length||sz.length||wt.length||lh.length) setTypography({families:fam.length?fam:(typography as any).families,sizes:sz.length?sz:(typography as any).sizes,weights:wt.length?wt:(typography as any).weights,lineHeights:lh.length?lh:(typography as any).lineHeights});
+          else setImportError("No typography tokens found in file.");
+        }
+        else if (tab==="Shadows") {
+          const sh: any[]=[]; let id=6000;
+          Object.entries(data).forEach(([n,t]: any)=>{if(t?.["$value"]!=null)sh.push({id:id++,name:n,value:String(t["$value"])});});
+          if(sh.length) setShadows(sh); else setImportError("No shadow tokens found in file.");
+        }
+        else if (tab==="Z-Index") {
+          const zi: any[]=[]; let id=7000;
+          const src = data["z-index"] || data.zindex || data;
+          Object.entries(src).forEach(([n,t]: any)=>{if(t?.["$value"]!=null)zi.push({id:id++,name:n,value:String(t["$value"])});});
+          if(zi.length) setZIndex(zi); else setImportError("No z-index tokens found in file.");
+        }
+        else if (tab==="Breakpoints") {
+          const bp: any[]=[]; let id=7500;
+          const src = data.breakpoints || data.screens || data;
+          const entries = Object.entries(src).filter(([,t]: any)=>t?.["$value"]!=null);
+          entries.forEach(([n,t]: any,i)=>{bp.push({id:id++,name:n,value:String(typeof t["$value"]==="object"?t["$value"].value:t["$value"]).replace("px",""),max:i<entries.length-1?String(typeof (entries[i+1][1] as any)["$value"]==="object"?(entries[i+1][1] as any)["$value"].value:(entries[i+1][1] as any)["$value"]).replace("px",""):""});});
+          if(bp.length) setBreakpoints(bp); else setImportError("No breakpoint tokens found in file.");
+        }
         else {
           const cc = customCollections.find(c => c.name === tab);
           if (cc) {
