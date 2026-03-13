@@ -132,6 +132,15 @@ function genSpacingJSON(spacing: any[])     { const t: any={}; spacing.forEach(s
 function genTypographyJSON(typography: any) { const t: any={family:{},size:{},weight:{},"line-height":{}}; typography.families.forEach((f: any)    => { t.family[f.name]         = { "$type":"fontFamily", "$value":f.value }; }); typography.sizes.forEach((s: any)       => { t.size[s.name]           = { "$type":"dimension",  "$value":{ value:parseFloat(s.value)||0, unit:"px" } }; }); typography.weights.forEach((w: any)     => { t.weight[w.name]         = { "$type":"number",     "$value":parseFloat(w.value)||0 }; }); typography.lineHeights.forEach((l: any) => { t["line-height"][l.name] = { "$type":"number",     "$value":parseFloat(l.value)||0 }; }); return JSON.stringify(t,null,2); }
 function genRadiusJSON(radius: any[])       { const t: any={}; radius.forEach(r       => { t[r.name]       = { "$type":"dimension", "$value":{ value:parseFloat(r.value)||0, unit:"px" } }; }); return JSON.stringify(t,null,2); }
 function genBorderJSON(borders: any[])      { const t: any={}; borders.forEach(b      => { t[b.name]       = { "$type":"dimension", "$value":{ value:parseFloat(b.value)||0, unit:"px" } }; }); return JSON.stringify(t,null,2); }
+function genCustomJSON(items: any[], type: string, unit: string) {
+  const t: any={};
+  const isNum = type==="number"||type==="dimension"||type==="duration";
+  items.forEach(i => {
+    const val = isNum ? (parseFloat(i.value)||0) : i.value;
+    t[i.name] = { "$type":type, "$value": unit ? { value:val, unit } : val };
+  });
+  return JSON.stringify(t,null,2);
+}
 function genShadowsJSON(shadows: any[])     { const t: any={}; shadows.forEach(s      => { t[s.name]       = { "$type":"string",    "$value":s.value }; });                                    return JSON.stringify(t,null,2); }
 function genZIndexJSON(zindex: any[])       { const t: any={}; zindex.forEach(z        => { t[z.name]       = { "$type":"number",    "$value":parseFloat(z.value)||0 }; });                    return JSON.stringify(t,null,2); }
 function genBreakpointsJSON(bps: any[])     { const t: any={}; bps.forEach(b           => { t[b.name]       = { "$type":"number",    "$value":parseFloat(b.value)||0 }; });                    return JSON.stringify(t,null,2); }
@@ -310,7 +319,7 @@ function ShadowRow({ sh, dragHandlers, onChangeName, onChangeValue, onDelete }: 
 }
 
 // ── Download panel ────────────────────────────────────────────────────────────
-function DownloadPanel({ enabled, primGroups, primitives, colors, spacing, typography, textStyles, radius, borders, shadows, zindex, breakpoints }: any) {
+function DownloadPanel({ enabled, primGroups, primitives, colors, spacing, typography, textStyles, radius, borders, shadows, zindex, breakpoints, customCollections }: any) {
   const allFiles = [
     { tab:"Primitives",   label:"primitives.json",     name:"primitives.json",     json:() => genPrimitivesJSON(primGroups,primitives)     },
     { tab:"Colors",       label:"colors-light.json",   name:"colors-light.json",   json:() => genColorsJSON(colors,primitives,"light")     },
@@ -323,6 +332,7 @@ function DownloadPanel({ enabled, primGroups, primitives, colors, spacing, typog
     { tab:"Shadows",      label:"shadows.json",        name:"shadows.json",        json:() => genShadowsJSON(shadows)                      },
     { tab:"Z-Index",      label:"z-index.json",        name:"z-index.json",        json:() => genZIndexJSON(zindex)                        },
     { tab:"Breakpoints",  label:"breakpoints.json",    name:"breakpoints.json",    json:() => genBreakpointsJSON(breakpoints)              },
+    ...(customCollections||[]).map((c: any) => ({ tab:c.name, label:c.jsonKey+".json", name:c.jsonKey+".json", json:()=>genCustomJSON(c.items,c.type,c.unit) })),
   ].filter(f => enabled.has(f.tab));
 
   const [checked, setChecked] = useState(() => new Set(allFiles.map(f => f.name)));
@@ -377,6 +387,7 @@ export default function App() {
   const [shadows,     setShadows]       = useState(defaultShadows);
   const [zindex,      setZIndex]        = useState(defaultZIndex);
   const [breakpoints, setBreakpoints]   = useState(defaultBreakpoints);
+  const [customCollections, setCustomCollections] = useState<any[]>([]);
   const [showPreview,      setShowPreview]      = useState(false);
   const [showDl,           setShowDl]           = useState(false);
   const [copied,           setCopied]           = useState(false);
@@ -384,9 +395,49 @@ export default function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const fileRef = useRef<any>();
 
+  const allTabs = [...ALL_TABS, ...customCollections.map((c: any) => c.name)];
+
+  const addCustomCollection = () => {
+    const id = uid();
+    const name = "Custom " + id;
+    setCustomCollections(cc => [...cc, { id, name, jsonKey: "custom-" + id, type: "number", unit: "", items: [], locked: false }]);
+    setEnabledTabs(prev => { const next = new Set(prev); next.add(name); return next; });
+    setTab(name);
+  };
+  const updateCustomCollection = (id: number, field: string, val: any) =>
+    setCustomCollections(cc => cc.map(c => c.id === id ? { ...c, [field]: val } : c));
+  const renameCustomCollection = (id: number, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed || allTabs.includes(trimmed)) return;
+    setCustomCollections(cc => cc.map(c => {
+      if (c.id !== id) return c;
+      return { ...c, name: trimmed };
+    }));
+    setEnabledTabs(prev => {
+      const old = customCollections.find(c => c.id === id)?.name;
+      const next = new Set(prev);
+      if (old && next.has(old)) { next.delete(old); next.add(trimmed); }
+      return next;
+    });
+    if (tab === customCollections.find(c => c.id === id)?.name) setTab(trimmed);
+  };
+  const deleteCustomCollection = (id: number) => {
+    const c = customCollections.find(x => x.id === id);
+    if (!c) return;
+    setCustomCollections(cc => cc.filter(x => x.id !== id));
+    setEnabledTabs(prev => { const next = new Set(prev); next.delete(c.name); return next; });
+    if (tab === c.name) setTab(ALL_TABS[0]);
+  };
+  const updateCustomItem = (collId: number, itemId: number, field: string, val: string) =>
+    setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: c.items.map((i: any) => i.id === itemId ? { ...i, [field]: val } : i) } : c));
+  const deleteCustomItem = (collId: number, itemId: number) =>
+    setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: c.items.filter((i: any) => i.id !== itemId) } : c));
+  const addCustomItem = (collId: number) =>
+    setCustomCollections(cc => cc.map(c => c.id === collId ? { ...c, items: [...c.items, { id: uid(), name: "new", value: c.type === "color" ? "{primitives.blue.600}" : c.type === "fontFamily" ? "Inter, sans-serif" : "0" }] } : c));
+
   const toggleTab = (t: string) => setEnabledTabs(prev => {
     const next = new Set(prev);
-    if (next.has(t)) { next.delete(t); if (tab===t) { const fb=ALL_TABS.find(x=>next.has(x)); if(fb) setTab(fb); } }
+    if (next.has(t)) { next.delete(t); if (tab===t) { const fb=allTabs.find(x=>next.has(x)); if(fb) setTab(fb); } }
     else { next.add(t); setTab(t); }
     return next;
   });
@@ -429,6 +480,8 @@ export default function App() {
     if (tab==="Shadows")      return genShadowsJSON(shadows);
     if (tab==="Z-Index")      return genZIndexJSON(zindex);
     if (tab==="Breakpoints")  return genBreakpointsJSON(breakpoints);
+    const cc = customCollections.find(c => c.name === tab);
+    if (cc) return genCustomJSON(cc.items, cc.type, cc.unit);
     return "";
   };
 
@@ -441,6 +494,7 @@ export default function App() {
     setTextStyles(defaultTextStyles); setTsGroups(DEFAULT_TS_GROUPS);
     setRadius(defaultRadius); setBorders(defaultBorders); setShadows(defaultShadows);
     setZIndex(defaultZIndex); setBreakpoints(defaultBreakpoints);
+    setCustomCollections([]); setEnabledTabs(new Set(ALL_TABS)); setTab("Primitives");
     setShowResetConfirm(false); setImportError("");
   };
 
@@ -489,6 +543,23 @@ export default function App() {
         else if (tab==="Shadows") { setImportError("Shadows import not yet supported."); }
         else if (tab==="Z-Index") { setImportError("Z-Index import not yet supported."); }
         else if (tab==="Breakpoints") { setImportError("Breakpoints import not yet supported."); }
+        else {
+          const cc = customCollections.find(c => c.name === tab);
+          if (cc) {
+            const key = Object.keys(data).find(k => k !== "$description") || cc.jsonKey;
+            const tokens = data[key] || data;
+            const items: any[] = []; let id = 8000;
+            Object.entries(tokens).forEach(([n, t]: any) => {
+              if (t?.["$value"] !== undefined) {
+                const val = typeof t["$value"] === "object" ? String(t["$value"].value) : String(t["$value"]);
+                items.push({ id: id++, name: n, value: val });
+              }
+            });
+            if (items.length) {
+              setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, items } : c));
+            } else setImportError("No tokens found in file.");
+          }
+        }
       } catch { setImportError("Invalid JSON."); }
     };
     reader.readAsText(file); e.target.value="";
@@ -576,6 +647,10 @@ export default function App() {
     else if (tab==="Shadows")     { setShadows(defaultShadows); }
     else if (tab==="Z-Index")     { setZIndex(defaultZIndex); }
     else if (tab==="Breakpoints") { setBreakpoints(defaultBreakpoints); }
+    else {
+      const cc = customCollections.find(c => c.name === tab);
+      if (cc) setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, items: [] } : c));
+    }
     setTabResetConfirm(false);
   };
 
@@ -619,7 +694,7 @@ export default function App() {
             {showDl && (
               <div style={{position:"absolute",top:"calc(100% + 4px)",right:0,zIndex:200}}>
                 <div onClick={()=>setShowDl(false)} style={{position:"fixed",inset:0,zIndex:-1}} />
-                <DownloadPanel enabled={enabledTabs} primGroups={primGroups} primitives={primitives} colors={colors} spacing={spacing} typography={typography} textStyles={textStyles} radius={radius} borders={borders} shadows={shadows} zindex={zindex} breakpoints={breakpoints} />
+                <DownloadPanel enabled={enabledTabs} primGroups={primGroups} primitives={primitives} colors={colors} spacing={spacing} typography={typography} textStyles={textStyles} radius={radius} borders={borders} shadows={shadows} zindex={zindex} breakpoints={breakpoints} customCollections={customCollections} />
               </div>
             )}
           </div>
@@ -630,7 +705,7 @@ export default function App() {
 
         {/* Sidebar */}
         <div style={{width:160,background:"#111118",borderRight:"1px solid #222230",paddingTop:12,flexShrink:0,display:"flex",flexDirection:"column"}}>
-          {ALL_TABS.map(t => {
+          {allTabs.map(t => {
             const enabled=enabledTabs.has(t), active=tab===t;
             return (
               <div key={t} style={{display:"flex",alignItems:"center"}}>
@@ -643,6 +718,7 @@ export default function App() {
               </div>
             );
           })}
+          <button onClick={addCustomCollection} style={{margin:"8px 14px",padding:"8px 0",fontSize:12,borderRadius:6,border:"1px dashed #4f46e5",background:"#1a1a3e",color:"#a5b4fc",cursor:"pointer"}}>+ Add Collection</button>
         </div>
 
         {/* Content */}
@@ -759,7 +835,14 @@ export default function App() {
                     <DraggableRow key={item.id} id={item.id} dragHandlers={typoDragMap[key]}>
                       <div style={{display:"grid",gridTemplateColumns:"180px 1fr 32px",gap:10,alignItems:"center"}}>
                         <input value={item.name} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,name:e.target.value}:i)}))} style={inp()} />
-                        <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} style={inp({width:"100%",boxSizing:"border-box",fontFamily:key==="families"?"inherit":"monospace"})} />{unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{unit}</span>}</div>
+                        <div style={{display:"flex",gap:6,alignItems:"center"}}>{key==="families" ? (
+                          <select value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} style={inp({width:"100%",fontSize:11,padding:"8px 6px",fontFamily:item.value})}>
+                            {FONT_FAMILIES.map(f=><option key={f.value} value={f.value} style={{fontFamily:f.value}}>{f.label}</option>)}
+                            {!FONT_FAMILIES.some(f=>f.value===item.value) && <option value={item.value}>{item.value}</option>}
+                          </select>
+                        ) : (
+                          <input value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} />
+                        )}{unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{unit}</span>}</div>
                         <button onClick={()=>setTypography((t: any)=>({...t,[key]:t[key].filter((i: any)=>i.id!==item.id)}))} style={{...delBtn,fontSize:18}}>x</button>
                       </div>
                     </DraggableRow>
@@ -946,6 +1029,119 @@ export default function App() {
               <AddRowBtn onClick={()=>setBreakpoints((b: any[])=>[...b,{id:uid(),name:"new",value:"",max:""}])} label="+ Add breakpoint token" />
             </div>
           )}
+
+          {/* CUSTOM COLLECTIONS */}
+          {customCollections.map((cc: any) => tab === cc.name && (
+            <div key={cc.id}>
+              <TabHeader title={cc.name} description={`Custom collection — exports as ${cc.jsonKey}.json`}
+                actions={tabActions(<button onClick={() => addCustomItem(cc.id)} style={tabAddBtnStyle}>+ Add Token</button>)} />
+
+              {/* Collection settings */}
+              <div style={{display:"flex",gap:12,marginBottom:20,padding:12,background:"#111118",borderRadius:8,border:"1px solid #1e1e30",flexWrap:"wrap",alignItems:"center"}}>
+                <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"#777"}}>
+                  Tab Name
+                  <input value={cc.name} disabled={cc.locked} onChange={e => {
+                    const old = cc.name;
+                    const nv = e.target.value;
+                    setCustomCollections(ccs => ccs.map(c => c.id === cc.id ? { ...c, name: nv } : c));
+                    setEnabledTabs(prev => { const next = new Set(prev); if (next.has(old)) { next.delete(old); next.add(nv); } return next; });
+                    setTab(nv);
+                  }} style={inp({ width: 120, opacity: cc.locked ? 0.5 : 1 })} />
+                </label>
+                <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"#777"}}>
+                  JSON Key
+                  <input value={cc.jsonKey} disabled={cc.locked} onChange={e => updateCustomCollection(cc.id, "jsonKey", e.target.value)} style={inp({ width: 120, fontFamily: "monospace", opacity: cc.locked ? 0.5 : 1 })} />
+                </label>
+                <label style={{display:"flex",gap:6,alignItems:"center",fontSize:12,color:"#777"}}>
+                  Value Type
+                  <select value={cc.type + (cc.unit ? "|" + cc.unit : "")} disabled={cc.locked} onChange={e => {
+                    const [type, unit = ""] = e.target.value.split("|");
+                    updateCustomCollection(cc.id, "type", type);
+                    updateCustomCollection(cc.id, "unit", unit);
+                  }} style={inp({ width: 160, fontSize: 11, padding: "8px 6px", opacity: cc.locked ? 0.5 : 1 })}>
+                    <optgroup label="Unitless">
+                      <option value="number">Number</option>
+                      <option value="string">String</option>
+                      <option value="color">Color</option>
+                      <option value="fontFamily">Font Family</option>
+                      <option value="fontWeight">Font Weight</option>
+                    </optgroup>
+                    <optgroup label="Dimension (length)">
+                      <option value="dimension|px">Dimension — px</option>
+                      <option value="dimension|rem">Dimension — rem</option>
+                      <option value="dimension|em">Dimension — em</option>
+                      <option value="dimension|%">Dimension — %</option>
+                      <option value="dimension|vw">Dimension — vw</option>
+                      <option value="dimension|vh">Dimension — vh</option>
+                    </optgroup>
+                    <optgroup label="Duration">
+                      <option value="duration|ms">Duration — ms</option>
+                      <option value="duration|s">Duration — s</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                      <option value="number|deg">Number — deg</option>
+                      <option value="cubicBezier">Cubic Bezier</option>
+                    </optgroup>
+                  </select>
+                </label>
+                <div style={{display:"flex",gap:8,marginLeft:"auto",alignItems:"center"}}>
+                  {cc.locked ? (
+                    cc.items.length === 0 && <button onClick={() => updateCustomCollection(cc.id, "locked", false)} style={tabBtnStyle}>Edit</button>
+                  ) : (
+                    <button onClick={() => updateCustomCollection(cc.id, "locked", true)} style={tabAddBtnStyle}>Save</button>
+                  )}
+                  <button onClick={() => deleteCustomCollection(cc.id)} style={{fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px solid #7f1d1d",background:"#1a0a0a",color:"#f87171",cursor:"pointer"}}>Delete Collection</button>
+                </div>
+              </div>
+
+              {/* Column headers */}
+              <div style={{display:"grid",gridTemplateColumns:"28px 100px 1fr 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
+                {["","Prefix","Name","Value",""].map((h,i) => <div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+              </div>
+
+              {cc.items.map((item: any) => (
+                <DraggableRow key={item.id} id={item.id} dragHandlers={{
+                  onDragStart: (id: number) => { (cc as any)._dragId = id; },
+                  onDragOver: (e: any, id: number) => { e.preventDefault(); (cc as any)._overId = id; },
+                  onDrop: () => {
+                    const from = (cc as any)._dragId, to = (cc as any)._overId;
+                    if (from == null || to == null || from === to) return;
+                    setCustomCollections(ccs => ccs.map(c => {
+                      if (c.id !== cc.id) return c;
+                      const items = [...c.items];
+                      const fi = items.findIndex((i: any) => i.id === from);
+                      const ti = items.findIndex((i: any) => i.id === to);
+                      if (fi < 0 || ti < 0) return c;
+                      const [moved] = items.splice(fi, 1);
+                      items.splice(ti, 0, moved);
+                      return { ...c, items };
+                    }));
+                  },
+                  onDragEnd: () => { (cc as any)._dragId = null; (cc as any)._overId = null; },
+                }}>
+                  <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 32px",gap:10,alignItems:"center"}}>
+                    <span style={{fontSize:12,color:"#777"}}>{cc.jsonKey} /</span>
+                    <input value={item.name} onChange={e => updateCustomItem(cc.id, item.id, "name", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box" })} />
+                    {cc.type === "color" ? (
+                      <PrimSelector value={item.value} primitives={primitives} primGroups={primGroups} onChange={(v: string) => updateCustomItem(cc.id, item.id, "value", v)} mode="Value" />
+                    ) : cc.type === "fontFamily" ? (
+                      <select value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", fontSize: 11, padding: "8px 6px", fontFamily: item.value })}>
+                        {FONT_FAMILIES.map(f => <option key={f.value} value={f.value} style={{fontFamily: f.value}}>{f.label}</option>)}
+                        {!FONT_FAMILIES.some(f => f.value === item.value) && <option value={item.value}>{item.value}</option>}
+                      </select>
+                    ) : (
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <input value={item.value} onChange={e => updateCustomItem(cc.id, item.id, "value", e.target.value)} style={inp({ width: "100%", boxSizing: "border-box", fontFamily: "monospace" })} />
+                        {cc.unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{cc.unit}</span>}
+                      </div>
+                    )}
+                    <button onClick={() => deleteCustomItem(cc.id, item.id)} style={{...delBtn,fontSize:18}}>x</button>
+                  </div>
+                </DraggableRow>
+              ))}
+              <AddRowBtn onClick={() => addCustomItem(cc.id)} label={`+ Add ${cc.jsonKey} token`} />
+            </div>
+          ))}
 
         </div>
 
