@@ -201,7 +201,7 @@ let _id = 500;
 const uid = () => ++_id;
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const inp = (extra: any={}) => ({background:"#1a1a2e",border:"1px solid #333",borderRadius:6,padding:"9px 12px",fontSize:13,color:"#fff",outline:"none",...extra});
+const inp = (extra: any={}) => ({background:"#1a1a2e",border:"1px solid #333",borderRadius:6,padding:"9px 12px",fontSize:13,color:"#fff",outline:"none",boxSizing:"border-box" as const,...extra});
 const delBtn: any = {background:"none",border:"none",color:"#f87171",cursor:"pointer"};
 const dupBtn: any = {background:"none",border:"none",color:"#777",cursor:"pointer",fontSize:14,padding:0,lineHeight:1,title:"Duplicate"};
 const rowBase: any = {padding:"8px 0",borderBottom:"1px solid #14141e"};
@@ -287,17 +287,16 @@ function PrimSelector({ value, primitives, primGroups, onChange, mode }: any) {
   const opts = getPrimOptions(primitives, primGroups);
   const isCustom = !value.startsWith("{primitives.");
   const resolved = resolveColor(value, primitives);
-  const [showCustom, setShowCustom] = useState(isCustom);
   return (
     <div style={{display:"flex",flexDirection:"column",gap:4}}>
       <div style={{display:"flex",alignItems:"center",gap:6}}>
         <div style={{width:20,height:20,borderRadius:4,background:resolved,border:"1px solid #333",flexShrink:0}} />
         <span style={{fontSize:11,color:"#777",fontFamily:"monospace"}}>{isCustom ? resolved : value.replace("{primitives.","").replace("}","")}</span>
       </div>
-      <select value={isCustom?"custom":value} onChange={e=>{const v=e.target.value;if(v==="custom"){setShowCustom(true);onChange(resolved);}else{setShowCustom(false);onChange(v);}}} style={{background:"#1a1a2e",border:"1px solid #333",borderRadius:6,padding:"8px 10px",fontSize:12,color:"#777",outline:"none",cursor:"pointer"}}>
+      <select value={isCustom?"custom":value} onChange={e=>{const v=e.target.value;if(v==="custom"){onChange(resolved);}else{onChange(v);}}} style={{background:"#1a1a2e",border:"1px solid #333",borderRadius:6,padding:"8px 10px",fontSize:12,color:"#777",outline:"none",cursor:"pointer"}}>
         <optgroup label={"-- "+mode+" mode --"}>{opts.map(o=><option key={o.ref} value={o.ref} style={{background:"#1a1a2e"}}>{o.label}</option>)}</optgroup>
       </select>
-      {showCustom && <div style={{display:"flex",gap:6,alignItems:"center"}}><input type="color" value={resolved} onChange={e=>onChange(e.target.value)} style={{width:32,height:32,border:"none",background:"none",cursor:"pointer",padding:0}} /><input value={value} onChange={e=>onChange(e.target.value)} placeholder="#000000 or rgba(...)" style={{flex:1,background:"#1a1a2e",border:"1px solid #333",borderRadius:6,padding:"8px 10px",fontSize:12,color:"#fff",outline:"none",fontFamily:"monospace"}} /></div>}
+      {isCustom && <div style={{display:"flex",gap:6,alignItems:"center"}}><input type="color" value={resolved} onChange={e=>onChange(e.target.value)} style={{width:32,height:32,border:"none",background:"none",cursor:"pointer",padding:0}} /><input value={value} onChange={e=>onChange(e.target.value)} placeholder="#000000 or rgba(...)" style={{flex:1,background:"#1a1a2e",border:"1px solid #333",borderRadius:6,padding:"8px 10px",fontSize:12,color:"#fff",outline:"none",fontFamily:"monospace"}} /></div>}
     </div>
   );
 }
@@ -884,7 +883,7 @@ export default function App() {
         </div>
 
         {/* Content */}
-        <div style={{flex:1,overflow:"auto",padding:28,minWidth:0,boxSizing:"border-box"}}>
+        <div style={{flex:1,overflowX:"hidden",overflowY:"auto",padding:28,minWidth:0,boxSizing:"border-box"}}>
 
           {/* PRIMITIVES */}
           {tab==="Primitives" && (
@@ -972,13 +971,13 @@ export default function App() {
               <div style={colHdr}>
                 {selectAllChk(spacing.map((s: any)=>s.id))}
                 <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                <div style={{flex:1,display:"grid",gridTemplateColumns:"80px 160px 160px 1fr 32px",gap:10}}>
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10}}>
                 {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                 </div>
               </div>
               {spacing.map((sp: any) => (
                 <DraggableRow key={sp.id} id={sp.id} dragHandlers={spacingDrag} checked={selected.has(sp.id)} onCheck={toggleSelect}>
-                  <div style={{display:"grid",gridTemplateColumns:"80px 160px 160px 1fr 32px",gap:10,alignItems:"center"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"#777"}}>spacing /</span>
                     <input value={sp.name} onChange={e=>updateList(setSpacing,sp.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
                     <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={sp.value} onChange={e=>updateList(setSpacing,sp.id,"value",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"#777"}}>px</span></div>
@@ -1046,14 +1045,14 @@ export default function App() {
                   <div style={colHdr}>
                     {selectAllChk((groupedTextStyles[g]||[]).map((s: any)=>s.id))}
                     <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                    <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 180px 54px 60px 64px 64px 64px 110px minmax(80px,1fr) 32px",gap:8}}>
-                    {["Name","Font Family","Size","Weight","L.Height","L.Space","P.Space","Decoration","Preview",""].map((h,i)=><div key={i} style={{fontSize:10,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                    <div style={{flex:1,display:"grid",gridTemplateColumns:"90px minmax(120px,1fr) 50px 54px 54px 54px 54px 90px minmax(60px,1fr) 32px",gap:6}}>
+                    {["Name","Font Family","Size","Weight","L.Hgt","L.Spc","P.Spc","Decor.","Preview",""].map((h,i)=><div key={i} style={{fontSize:10,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                     </div>
                   </div>
 
                   {groupedTextStyles[g] && groupedTextStyles[g].map((s: any) => (
                     <DraggableRow key={s.id} id={s.id} dragHandlers={textStylesDrag} checked={selected.has(s.id)} onCheck={toggleSelect}>
-                      <div style={{display:"grid",gridTemplateColumns:"100px 180px 54px 60px 64px 64px 64px 110px minmax(80px,1fr) 32px",gap:8,alignItems:"center"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"90px minmax(120px,1fr) 50px 54px 54px 54px 54px 90px minmax(60px,1fr) 32px",gap:6,alignItems:"center"}}>
 
                         {/* Name */}
                         <input value={s.name} onChange={e=>updateTextStyle(s.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
@@ -1134,13 +1133,13 @@ export default function App() {
               <div style={colHdr}>
                 {selectAllChk(borders.map((b: any)=>b.id))}
                 <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                <div style={{flex:1,display:"grid",gridTemplateColumns:"80px 160px 160px 1fr 32px",gap:10}}>
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10}}>
                 {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                 </div>
               </div>
               {borders.map((b: any) => (
                 <DraggableRow key={b.id} id={b.id} dragHandlers={borderDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
-                  <div style={{display:"grid",gridTemplateColumns:"80px 160px 160px 1fr 32px",gap:10,alignItems:"center"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"#777"}}>border /</span>
                     <input value={b.name} onChange={e=>updateList(setBorders,b.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
                     <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.value} onChange={e=>updateList(setBorders,b.id,"value",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"#777"}}>px</span></div>
@@ -1185,17 +1184,17 @@ export default function App() {
               <div style={colHdr}>
                 {selectAllChk(zindex.map((z: any)=>z.id))}
                 <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 180px 180px 1fr 32px",gap:10}}>
-                {["Prefix","Name","Value","",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 1fr 1fr 32px",gap:10}}>
+                {["Prefix","Name","Value",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                 </div>
               </div>
               {zindex.map((z: any) => (
                 <DraggableRow key={z.id} id={z.id} dragHandlers={zDrag} checked={selected.has(z.id)} onCheck={toggleSelect}>
-                  <div style={{display:"grid",gridTemplateColumns:"100px 180px 180px 1fr 32px",gap:10,alignItems:"center"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"#777"}}>z-index /</span>
                     <input value={z.name} onChange={e=>updateList(setZIndex,z.id,"name",e.target.value)} style={inp()} />
                     <input value={z.value} onChange={e=>updateList(setZIndex,z.id,"value",e.target.value)} style={inp({fontFamily:"monospace"})} />
-                    <div /><div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setZIndex,z.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setZIndex,z.id)} style={{...delBtn,fontSize:18}}>x</button></div>
+                    <div style={{display:"flex",gap:2}}><button onClick={()=>dupInList(setZIndex,z.id)} style={dupBtn}>⧉</button><button onClick={()=>deleteList(setZIndex,z.id)} style={{...delBtn,fontSize:18}}>x</button></div>
                   </div>
                 </DraggableRow>
               ))}
@@ -1210,13 +1209,13 @@ export default function App() {
               <div style={colHdr}>
                 {selectAllChk(breakpoints.map((b: any)=>b.id))}
                 <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
-                <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 140px 140px 140px 1fr 32px",gap:10}}>
+                <div style={{flex:1,display:"grid",gridTemplateColumns:"100px 1fr 1fr 1fr 1fr 32px",gap:10}}>
                 {["Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                 </div>
               </div>
               {breakpoints.map((b: any, idx: number) => (
                 <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
-                  <div style={{display:"grid",gridTemplateColumns:"100px 140px 140px 140px 1fr 32px",gap:10,alignItems:"center"}}>
+                  <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"#777"}}>breakpoint /</span>
                     <input value={b.name} onChange={e=>updateList(setBreakpoints,b.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
                     <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.value} onChange={e=>{
