@@ -247,7 +247,7 @@ body {
 .reset-confirm__cancel { font-size: 12px; padding: 5px 10px; border-radius: 5px; border: 1px solid var(--border-input); background: transparent; color: var(--text-muted); cursor: pointer; }
 .global-reset-btn { font-size: 13px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--danger-border); background: var(--danger-bg); color: var(--danger-text); cursor: pointer; }
 .dl-trigger { position: relative; }
-.dl-trigger__btn { font-size: 13px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-input); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; }
+.dl-trigger__btn { font-size: 13px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--bg-accent-subtle); color: var(--accent-text); cursor: pointer; }
 .dl-dropdown { position: absolute; top: calc(100% + 4px); right: 0; z-index: 200; }
 .dl-backdrop { position: fixed; inset: 0; z-index: -1; }
 
