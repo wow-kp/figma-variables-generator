@@ -28,7 +28,7 @@ If you are developing a production application, we recommend using TypeScript wi
 
 4. Search/filter within tabs - Useful once token lists grow large.
 5. ~~Bulk edit - Select multiple tokens and change a property across all of them (e.g., change font family for all body styles).~~ ✅
-6. Token references/aliases - Colors already support {primitives.blue.600} syntax; extending this to other tabs would be powerful.
+6. ~~Token references/aliases - Colors already support {primitives.blue.600} syntax; extending this to other tabs would be powerful.~~ ✅
 7. ~~Duplicate row/group - Quick way to create variations.~~ ✅
 
 ### Nice to have:
