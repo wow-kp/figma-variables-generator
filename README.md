@@ -20,7 +20,7 @@ If you are developing a production application, we recommend using TypeScript wi
 ### High value:
 
 1. ~~Custom tabs - Let users create their own token categories (e.g., "Animation", "Opacity", "Grid") with configurable value schemas. This would make the tool much more flexible.~~ ✅
-2. Persist state to localStorage - Right now everything resets on page reload. Auto-saving would be a huge UX win.
+2. ~~Persist state to localStorage - Right now everything resets on page reload. Auto-saving would be a huge UX win.~~ ✅
 3. Undo/Redo - Easy to accidentally delete something with no way back.
 
 
