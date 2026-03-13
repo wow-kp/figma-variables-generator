@@ -1,0 +1,11 @@
+export { PrimitivesTab } from "./PrimitivesTab";
+export { ColorsTab } from "./ColorsTab";
+export { SpacingTab } from "./SpacingTab";
+export { TypographyTab } from "./TypographyTab";
+export { TextStylesTab } from "./TextStylesTab";
+export { RadiusTab } from "./RadiusTab";
+export { BorderTab } from "./BorderTab";
+export { ShadowsTab } from "./ShadowsTab";
+export { ZIndexTab } from "./ZIndexTab";
+export { BreakpointsTab } from "./BreakpointsTab";
+export { CustomTab } from "./CustomTab";
