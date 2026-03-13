@@ -338,6 +338,8 @@ const defaultBreakpoints = [{id:1,name:"xs",value:"0",max:"567"},{id:2,name:"sm"
 let _id = 500;
 const uid = () => ++_id;
 
+const matchesSearch = (q: string, ...fields: string[]) => { if (!q) return true; const lq = q.toLowerCase(); return fields.some(f => f && f.toLowerCase().includes(lq)); };
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 const inp = (extra: any={}) => ({background:"var(--bg-input)",border:"1px solid var(--border-input)",borderRadius:6,padding:"9px 12px",fontSize:13,color:"var(--text-primary)",outline:"none",boxSizing:"border-box" as const,...extra});
 const delBtn: any = {background:"none",border:"none",color:"var(--danger-text)",cursor:"pointer"};
@@ -350,7 +352,7 @@ const hdrStyle: any = {fontSize:11,fontWeight:600,textTransform:"uppercase",lett
 function AddRowBtn({ onClick, label, disabled }: any) {
   return <button onClick={disabled ? undefined : onClick} disabled={disabled} style={{fontSize:12,padding:"6px 12px",borderRadius:6,border:"1px dashed var(--accent)",background:"var(--bg-accent-subtle)",color:"var(--accent-text)",cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,marginTop:6,width:"100%",textAlign:"left"}}>{label}</button>;
 }
-function TabHeader({ title, description, actions }: any) {
+function TabHeader({ title, description, actions, search, onSearch }: any) {
   return (
     <div style={{marginBottom:20,paddingBottom:16,borderBottom:"1px solid var(--border-section)"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
@@ -358,6 +360,10 @@ function TabHeader({ title, description, actions }: any) {
         {actions && <div style={{flexShrink:0}}>{actions}</div>}
       </div>
       {description && <div style={{fontSize:13,color:"var(--text-secondary)",marginTop:4}}>{description}</div>}
+      {onSearch && <div style={{marginTop:10,position:"relative"}}>
+        <input value={search||""} onChange={e=>onSearch(e.target.value)} placeholder="Filter tokens…" style={{width:"100%",background:"var(--bg-input)",border:"1px solid var(--border-input)",borderRadius:6,padding:"7px 30px 7px 12px",fontSize:12,color:"var(--text-primary)",outline:"none",boxSizing:"border-box"}} />
+        {search && <button onClick={()=>onSearch("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"var(--text-secondary)",cursor:"pointer",fontSize:14,padding:0,lineHeight:1}}>×</button>}
+      </div>}
     </div>
   );
 }
@@ -611,6 +617,7 @@ export default function App() {
   const [importError,      setImportError]      = useState("");
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [search, setSearch] = useState("");
   const fileRef = useRef<any>();
 
   const toggleSelect = useCallback((id: number) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }), []);
@@ -1078,7 +1085,7 @@ export default function App() {
                     const unlocked = curr.groups?.some((gr: any) => gr.locked === false);
                     if (unlocked) setCustomCollections(ccs => ccs.map(c => c.id !== curr.id ? c : { ...c, groups: c.groups.map((gr: any) => ({ ...gr, locked: true })) }));
                   }
-                  setTab(t);setTabResetConfirm(false);setSelected(new Set());
+                  setTab(t);setTabResetConfirm(false);setSelected(new Set());setSearch("");
                 }} style={{flex:1,textAlign:"left",padding:"10px 14px",fontSize:13,fontWeight:active?600:400,cursor:"pointer",border:"none",background:active?"var(--accent)":"transparent",color:active?"#fff":enabled?"var(--text-secondary)":"var(--text-disabled)",transition:"all 0.15s"}}>{t}</button>
                 <div onClick={()=>toggleTab(t)} title={enabled?"Exclude from export":"Include in export"} style={{width:36,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,paddingRight:10,paddingLeft:4,alignSelf:"stretch"}}>
                   <div style={{width:24,height:14,borderRadius:9999,background:enabled?"var(--accent)":"var(--toggle-off-bg)",border:"1px solid "+(enabled?"var(--accent)":"var(--text-disabled)"),position:"relative"}}>
@@ -1098,8 +1105,8 @@ export default function App() {
           {tab==="Primitives" && (
             <div>
               <TabHeader title="Primitive Colors" description="Raw palette. Click a name to rename. Never apply directly to layers."
-                actions={tabActions(<button onClick={addPrimGroup} style={tabAddBtnStyle}>+ Add Palette</button>)} />
-              {primGroups.map((g: any) => (
+                actions={tabActions(<button onClick={addPrimGroup} style={tabAddBtnStyle}>+ Add Palette</button>)} search={search} onSearch={setSearch} />
+              {primGroups.filter((g: any) => matchesSearch(search, g.label, g.key, ...g.shades)).map((g: any) => (
                 <div key={g.id} {...primGroupDrag.makeDropZone(String(g.id))} style={{marginBottom:32}}>
                   <div style={hdrStyle}><div draggable onDragStart={e=>primGroupDrag.onDragStart(e,String(g.id))} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div><InlineLabel value={g.label} prefix="primitives / " onCommit={(nl: string)=>renamePrimGroup(g.key,nl)} /><div style={{flex:1,height:1,background:"var(--border-section)"}} /><button onClick={()=>deletePrimGroup(g.key)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete palette</button></div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:12,alignItems:"flex-start"}}>
@@ -1140,21 +1147,24 @@ export default function App() {
           {tab==="Colors" && (
             <div>
               <TabHeader title="Semantic Color Tokens" description="Downloads as two files: colors-light.json and colors-dark.json."
-                actions={tabActions(<button onClick={addColorGroup} style={tabAddBtnStyle}>+ Add Group</button>)} />
-              {colorGroups.map((g: string) => (
+                actions={tabActions(<button onClick={addColorGroup} style={tabAddBtnStyle}>+ Add Group</button>)} search={search} onSearch={setSearch} />
+              {colorGroups.map((g: string) => {
+                const filtered = groupedColors[g].filter((c: any) => matchesSearch(search, g, c.name, c.description, c.light, c.dark));
+                if (search && filtered.length === 0) return null;
+                return (
                 <div key={g} {...colorGroupDrag.makeDropZone(g)} style={{marginBottom:28}}>
                   <div style={hdrStyle}><div draggable onDragStart={e=>colorGroupDrag.onDragStart(e,g)} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div><InlineLabel value={g} prefix="color / " onCommit={(n: string)=>renameColorGroup(g,n)} /><div style={{flex:1,height:1,background:"var(--border-section)"}} /><button onClick={()=>{const nn=g+" copy";setColorGroups(gs=>{const idx=gs.indexOf(g);const next=[...gs];next.splice(idx+1,0,nn);return next;});setColors(c=>[...c,...c.filter(i=>i.group===g).map(i=>({...i,id:uid(),group:nn}))]);}} style={{...dupBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>⧉ duplicate group</button><button onClick={()=>deleteColorGroup(g)} style={{...delBtn,fontSize:12,padding:"0 4px",marginLeft:4}}>x delete group</button></div>
-                  {groupedColors[g].length===0 && <div style={{fontSize:12,color:"var(--text-secondary)",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
-                  {groupedColors[g].length > 0 && (
+                  {filtered.length===0 && <div style={{fontSize:12,color:"var(--text-secondary)",padding:"8px 4px",fontStyle:"italic"}}>No tokens yet.</div>}
+                  {filtered.length > 0 && (
                     <div>
                       <div style={colHdr}>
-                        {selectAllChk(groupedColors[g].map((c: any)=>c.id))}
+                        {selectAllChk(filtered.map((c: any)=>c.id))}
                         <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
                         <div style={{flex:1,display:"grid",gridTemplateColumns:"110px 150px 1fr 1fr 32px",gap:10}}>
                         {["Group","Name","Light","Dark",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                         </div>
                       </div>
-                      {groupedColors[g].map((c: any) => (
+                      {filtered.map((c: any) => (
                         <DraggableRow key={c.id} id={c.id} dragHandlers={colorDrag} checked={selected.has(c.id)} onCheck={toggleSelect}>
                           <div style={{display:"grid",gridTemplateColumns:"110px 150px 1fr 1fr 32px",gap:10,alignItems:"start"}}>
                             <select value={c.group} onChange={e=>updateColor(c.id,"group",e.target.value)} style={inp({width:"100%"})}>{colorGroups.map((g2: string)=><option key={g2}>{g2}</option>)}</select>
@@ -1169,14 +1179,14 @@ export default function App() {
                   )}
                   <AddRowBtn onClick={()=>setColors((c: any[])=>[...c,{id:uid(),group:g,name:"new-color",light:"{primitives.blue.600}",dark:"{primitives.blue.400}",description:""}])} label={"+ Add token to "+g} />
                 </div>
-              ))}
+              );})}
             </div>
           )}
 
           {/* SPACING */}
           {tab==="Spacing" && (
             <div>
-              <TabHeader title="Spacing Tokens" description="4px base scale. Drag to reorder." actions={tabActions()} />
+              <TabHeader title="Spacing Tokens" description="4px base scale. Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
               <div style={colHdr}>
                 {selectAllChk(spacing.map((s: any)=>s.id))}
                 <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
@@ -1184,7 +1194,7 @@ export default function App() {
                 {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                 </div>
               </div>
-              {spacing.map((sp: any) => (
+              {spacing.filter((sp: any) => matchesSearch(search, sp.name, sp.value)).map((sp: any) => (
                 <DraggableRow key={sp.id} id={sp.id} dragHandlers={spacingDrag} checked={selected.has(sp.id)} onCheck={toggleSelect}>
                   <div style={{display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"var(--text-secondary)"}}>spacing /</span>
@@ -1202,7 +1212,7 @@ export default function App() {
           {/* TYPOGRAPHY */}
           {tab==="Typography" && (
             <div>
-              <TabHeader title="Typography Tokens" description="Font families, sizes, weights and line heights. For composite text styles, use the Text Styles tab." actions={tabActions()} />
+              <TabHeader title="Typography Tokens" description="Font families, sizes, weights and line heights. For composite text styles, use the Text Styles tab." actions={tabActions()} search={search} onSearch={setSearch} />
               {[["families","font / family",""],["sizes","font / size","px"],["weights","font / weight",""],["lineHeights","font / line-height",""]].map(([key,label,unit]) => (
                 <div key={key} style={{marginBottom:28}}>
                   <div style={{marginBottom:8}}><span style={{fontSize:12,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em",color:"var(--text-secondary)"}}>{label} — drag to reorder</span></div>
@@ -1213,7 +1223,7 @@ export default function App() {
                     {["Name","Value",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                     </div>
                   </div>
-                  {(typography as any)[key].map((item: any) => (
+                  {(typography as any)[key].filter((item: any) => matchesSearch(search, item.name, item.value)).map((item: any) => (
                     <DraggableRow key={item.id} id={item.id} dragHandlers={typoDragMap[key]} checked={selected.has(item.id)} onCheck={toggleSelect}>
                       <div style={{display:"grid",gridTemplateColumns:"180px 1fr 32px",gap:10,alignItems:"center"}}>
                         <input value={item.name} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,name:e.target.value}:i)}))} style={inp()} />
@@ -1240,9 +1250,12 @@ export default function App() {
             <div>
               <TabHeader title="Text Styles"
                 description="Composite typography styles — each defines a full font stack. Exports as text-styles.json for the plugin importer."
-                actions={tabActions(<button onClick={addTsGroup} style={tabAddBtnStyle}>+ Add Group</button>)} />
+                actions={tabActions(<button onClick={addTsGroup} style={tabAddBtnStyle}>+ Add Group</button>)} search={search} onSearch={setSearch} />
 
-              {tsGroups.map((g: string) => (
+              {tsGroups.map((g: string) => {
+                const filteredTs = (groupedTextStyles[g]||[]).filter((s: any) => matchesSearch(search, g, s.name, s.fontFamily, s.fontSize, s.fontWeight));
+                if (search && filteredTs.length === 0) return null;
+                return (
                 <div key={g} {...tsGroupDrag.makeDropZone(g)} style={{marginBottom:32}}>
                   <div style={hdrStyle}>
                     <div draggable onDragStart={e=>tsGroupDrag.onDragStart(e,g)} style={{cursor:"grab",padding:"0 4px",color:"var(--text-secondary)",fontSize:14,userSelect:"none",display:"flex",alignItems:"center",flexShrink:0}}>⌿</div>
@@ -1253,14 +1266,14 @@ export default function App() {
 
                   {/* Column headers */}
                   <div style={colHdr}>
-                    {selectAllChk((groupedTextStyles[g]||[]).map((s: any)=>s.id))}
+                    {selectAllChk(filteredTs.map((s: any)=>s.id))}
                     <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
                     <div style={{flex:1,display:"grid",gridTemplateColumns:"90px minmax(120px,1fr) 50px 54px 54px 54px 54px 90px minmax(60px,1fr) 32px",gap:6}}>
                     {["Name","Font Family","Size","Weight","L.Hgt","L.Spc","P.Spc","Decor.","Preview",""].map((h,i)=><div key={i} style={{fontSize:10,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                     </div>
                   </div>
 
-                  {groupedTextStyles[g] && groupedTextStyles[g].map((s: any) => (
+                  {filteredTs.map((s: any) => (
                     <DraggableRow key={s.id} id={s.id} dragHandlers={textStylesDrag} checked={selected.has(s.id)} onCheck={toggleSelect}>
                       <div style={{display:"grid",gridTemplateColumns:"90px minmax(120px,1fr) 50px 54px 54px 54px 54px 90px minmax(60px,1fr) 32px",gap:6,alignItems:"center"}}>
 
@@ -1310,7 +1323,8 @@ export default function App() {
 
                   <AddRowBtn onClick={()=>addTextStyle(g)} label={"+ Add style to "+g} />
                 </div>
-              ))}
+                );
+              })}
 
               {tsGroups.length === 0 && <div style={{fontSize:13,color:"var(--text-secondary)",fontStyle:"italic",padding:"32px 0",textAlign:"center"}}>No groups yet. Click "+ Add Group" to start.</div>}
             </div>
@@ -1319,10 +1333,10 @@ export default function App() {
           {/* RADIUS */}
           {tab==="Radius" && (
             <div>
-              <TabHeader title="Border Radius Tokens" description="Drag to reorder." actions={tabActions()} />
+              <TabHeader title="Border Radius Tokens" description="Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
               <div style={{display:"flex",alignItems:"center",gap:6,padding:"0 0 8px 8px"}}>{selectAllChk(radius.map((r: any)=>r.id))}<span style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>Select all</span></div>
               <div style={{display:"flex",flexWrap:"wrap",gap:20,paddingLeft:8}}>
-                {radius.map((r: any) => (
+                {radius.filter((r: any) => matchesSearch(search, r.name, r.value)).map((r: any) => (
                   <div key={r.id} draggable onDragStart={()=>radiusDrag.onDragStart(r.id)} onDragOver={(e: any)=>radiusDrag.onDragOver(e,r.id)} onDrop={()=>radiusDrag.onDrop()} onDragEnd={()=>radiusDrag.onDragEnd()} style={{background:selected.has(r.id)?"var(--bg-selected)":"var(--bg-card)",border:"1px solid "+(selected.has(r.id)?"var(--accent)":"var(--border-struct)"),borderRadius:12,padding:"20px 16px",display:"flex",flexDirection:"column",alignItems:"center",gap:14,width:120,boxSizing:"border-box",cursor:"grab",position:"relative"}}>
                     <input type="checkbox" checked={selected.has(r.id)} onChange={()=>toggleSelect(r.id)} style={{...chkStyle,position:"absolute",top:8,left:8}} />
                     <div style={{width:60,height:60,background:"#4f46e5",opacity:0.75,borderRadius:Math.min(parseInt(r.value)||0,30)+"px",flexShrink:0}} />
@@ -1339,7 +1353,7 @@ export default function App() {
           {/* BORDER */}
           {tab==="Border" && (
             <div>
-              <TabHeader title="Border Width Tokens" description="Drag to reorder." actions={tabActions()} />
+              <TabHeader title="Border Width Tokens" description="Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
               <div style={colHdr}>
                 {selectAllChk(borders.map((b: any)=>b.id))}
                 <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
@@ -1347,7 +1361,7 @@ export default function App() {
                 {["Prefix","Name","Value","Visual",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                 </div>
               </div>
-              {borders.map((b: any) => (
+              {borders.filter((b: any) => matchesSearch(search, b.name, b.value)).map((b: any) => (
                 <DraggableRow key={b.id} id={b.id} dragHandlers={borderDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
                   <div style={{display:"grid",gridTemplateColumns:"80px 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"var(--text-secondary)"}}>border /</span>
@@ -1365,7 +1379,7 @@ export default function App() {
           {/* SHADOWS */}
           {tab==="Shadows" && (
             <div>
-              <TabHeader title="Shadow Tokens" description="Drag to reorder. Click the swatch to open the shadow picker." actions={tabActions()} />
+              <TabHeader title="Shadow Tokens" description="Drag to reorder. Click the swatch to open the shadow picker." actions={tabActions()} search={search} onSearch={setSearch} />
               <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 0 8px 8px",borderBottom:"1px solid var(--border-section)",marginBottom:4}}>
                 {selectAllChk(shadows.map((s: any)=>s.id))}
                 <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
@@ -1375,7 +1389,7 @@ export default function App() {
                 <span style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase",flexShrink:0,width:80}}>Preview</span>
                 <span style={{flexShrink:0,width:32}}></span>
               </div>
-              {shadows.map((sh: any) => (
+              {shadows.filter((sh: any) => matchesSearch(search, sh.name, sh.value)).map((sh: any) => (
                 <ShadowRow key={sh.id} sh={sh} dragHandlers={shadowDrag}
                   onChangeName={(v: string)=>updateList(setShadows,sh.id,"name",v)}
                   onChangeValue={(v: string)=>updateList(setShadows,sh.id,"value",v)}
@@ -1390,7 +1404,7 @@ export default function App() {
           {/* Z-INDEX */}
           {tab==="Z-Index" && (
             <div>
-              <TabHeader title="Z-Index Tokens" description="Stacking order reference. Drag to reorder." actions={tabActions()} />
+              <TabHeader title="Z-Index Tokens" description="Stacking order reference. Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
               <div style={colHdr}>
                 {selectAllChk(zindex.map((z: any)=>z.id))}
                 <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
@@ -1398,7 +1412,7 @@ export default function App() {
                 {["Prefix","Name","Value",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                 </div>
               </div>
-              {zindex.map((z: any) => (
+              {zindex.filter((z: any) => matchesSearch(search, z.name, z.value)).map((z: any) => (
                 <DraggableRow key={z.id} id={z.id} dragHandlers={zDrag} checked={selected.has(z.id)} onCheck={toggleSelect}>
                   <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"var(--text-secondary)"}}>z-index /</span>
@@ -1415,7 +1429,7 @@ export default function App() {
           {/* BREAKPOINTS */}
           {tab==="Breakpoints" && (
             <div>
-              <TabHeader title="Breakpoint Tokens" description="Min-width based. Drag to reorder." actions={tabActions()} />
+              <TabHeader title="Breakpoint Tokens" description="Min-width based. Drag to reorder." actions={tabActions()} search={search} onSearch={setSearch} />
               <div style={colHdr}>
                 {selectAllChk(breakpoints.map((b: any)=>b.id))}
                 <div style={{padding:"0 4px",fontSize:14,flexShrink:0,visibility:"hidden"}}>⌿</div>
@@ -1423,7 +1437,7 @@ export default function App() {
                 {["Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} style={{fontSize:11,color:"var(--text-secondary)",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
                 </div>
               </div>
-              {breakpoints.map((b: any, idx: number) => (
+              {breakpoints.filter((b: any) => matchesSearch(search, b.name, b.value, b.max)).map((b: any, idx: number) => (
                 <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag} checked={selected.has(b.id)} onCheck={toggleSelect}>
                   <div style={{display:"grid",gridTemplateColumns:"100px 1fr 1fr 1fr 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"var(--text-secondary)"}}>breakpoint /</span>
@@ -1457,7 +1471,7 @@ export default function App() {
           {customCollections.map((cc: any) => tab === cc.name && (
             <div key={cc.id}>
               <TabHeader title={cc.name} description={`Custom collection — exports as ${cc.jsonKey}.json`}
-                actions={tabActions(<button onClick={() => addCustomGroup(cc.id)} disabled={!cc.locked} style={{...tabAddBtnStyle, opacity: cc.locked ? 1 : 0.4, cursor: cc.locked ? "pointer" : "default"}}>+ Add Group</button>)} />
+                actions={tabActions(<button onClick={() => addCustomGroup(cc.id)} disabled={!cc.locked} style={{...tabAddBtnStyle, opacity: cc.locked ? 1 : 0.4, cursor: cc.locked ? "pointer" : "default"}}>+ Add Group</button>)} search={search} onSearch={setSearch} />
 
               {/* Collection settings */}
               <div style={{display:"flex",gap:12,marginBottom:20,padding:12,background:"var(--bg-card)",borderRadius:8,border:"1px solid var(--border-section)",flexWrap:"wrap",alignItems:"center"}}>
@@ -1486,7 +1500,9 @@ export default function App() {
               </div>
 
               {(cc.groups || []).map((g: any) => {
-                const groupItems = cc.items.filter((i: any) => i.group === g.name);
+                const allGroupItems = cc.items.filter((i: any) => i.group === g.name);
+                const groupItems = allGroupItems.filter((i: any) => matchesSearch(search, g.name, i.name, i.value));
+                if (search && groupItems.length === 0) return null;
                 const singleGroup = cc.groups.length <= 1;
                 const gLocked = g.locked !== false;
                 const valueTypeSelect = <select value={g.type + (g.unit ? "|" + g.unit : "")} disabled={gLocked} onChange={e => {
