@@ -835,7 +835,14 @@ export default function App() {
                     <DraggableRow key={item.id} id={item.id} dragHandlers={typoDragMap[key]}>
                       <div style={{display:"grid",gridTemplateColumns:"180px 1fr 32px",gap:10,alignItems:"center"}}>
                         <input value={item.name} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,name:e.target.value}:i)}))} style={inp()} />
-                        <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} style={inp({width:"100%",boxSizing:"border-box",fontFamily:key==="families"?"inherit":"monospace"})} />{unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{unit}</span>}</div>
+                        <div style={{display:"flex",gap:6,alignItems:"center"}}>{key==="families" ? (
+                          <select value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} style={inp({width:"100%",fontSize:11,padding:"8px 6px",fontFamily:item.value})}>
+                            {FONT_FAMILIES.map(f=><option key={f.value} value={f.value} style={{fontFamily:f.value}}>{f.label}</option>)}
+                            {!FONT_FAMILIES.some(f=>f.value===item.value) && <option value={item.value}>{item.value}</option>}
+                          </select>
+                        ) : (
+                          <input value={item.value} onChange={e=>setTypography((t: any)=>({...t,[key]:t[key].map((i: any)=>i.id===item.id?{...i,value:e.target.value}:i)}))} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} />
+                        )}{unit && <span style={{fontSize:12,color:"#777",flexShrink:0}}>{unit}</span>}</div>
                         <button onClick={()=>setTypography((t: any)=>({...t,[key]:t[key].filter((i: any)=>i.id!==item.id)}))} style={{...delBtn,fontSize:18}}>x</button>
                       </div>
                     </DraggableRow>
