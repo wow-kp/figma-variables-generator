@@ -1033,13 +1033,27 @@ export default function App() {
               <div style={{display:"grid",gridTemplateColumns:"28px 100px 140px 140px 140px 1fr 32px",gap:10,padding:"0 0 8px",borderBottom:"1px solid #1e1e30",marginBottom:4}}>
                 {["","Prefix","Name","Min (px)","Max (px)","Range",""].map((h,i)=><div key={i} style={{fontSize:11,color:"#777",fontWeight:600,textTransform:"uppercase"}}>{h}</div>)}
               </div>
-              {breakpoints.map((b: any) => (
+              {breakpoints.map((b: any, idx: number) => (
                 <DraggableRow key={b.id} id={b.id} dragHandlers={breakpointDrag}>
                   <div style={{display:"grid",gridTemplateColumns:"100px 140px 140px 140px 1fr 32px",gap:10,alignItems:"center"}}>
                     <span style={{fontSize:12,color:"#777"}}>breakpoint /</span>
                     <input value={b.name} onChange={e=>updateList(setBreakpoints,b.id,"name",e.target.value)} style={inp({width:"100%",boxSizing:"border-box"})} />
-                    <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.value} onChange={e=>updateList(setBreakpoints,b.id,"value",e.target.value)} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"#777",flexShrink:0}}>px</span></div>
-                    <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.max} onChange={e=>updateList(setBreakpoints,b.id,"max",e.target.value)} placeholder="none" style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"#777",flexShrink:0}}>px</span></div>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.value} onChange={e=>{
+                      const v = e.target.value;
+                      setBreakpoints(list => list.map((bp: any, i: number) => {
+                        if (bp.id === b.id) return { ...bp, value: v };
+                        if (i === idx - 1) return { ...bp, max: v };
+                        return bp;
+                      }));
+                    }} style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"#777",flexShrink:0}}>px</span></div>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}><input value={b.max} onChange={e=>{
+                      const v = e.target.value;
+                      setBreakpoints(list => list.map((bp: any, i: number) => {
+                        if (bp.id === b.id) return { ...bp, max: v };
+                        if (i === idx + 1) return { ...bp, value: v };
+                        return bp;
+                      }));
+                    }} placeholder="none" style={inp({width:"100%",boxSizing:"border-box",fontFamily:"monospace"})} /><span style={{fontSize:12,color:"#777",flexShrink:0}}>px</span></div>
                     <div style={{fontSize:12,color:"#777",fontFamily:"monospace"}}>{bpRange(b)}</div>
                     <button onClick={()=>deleteList(setBreakpoints,b.id)} style={{...delBtn,fontSize:18}}>x</button>
                   </div>
